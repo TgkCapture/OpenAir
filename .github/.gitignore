@@ -1,0 +1,25 @@
+# Go
+backend/bin/
+backend/*.env
+*.exe
+
+# Flutter
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+mobile/.packages
+mobile/pubspec.lock
+
+# Node
+admin/node_modules/
+admin/dist/
+admin/.env
+
+# Docker
+.env
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
