@@ -23,3 +23,5 @@ docker-compose.override.yml
 # OS
 .DS_Store
 Thumbs.db
+mobile/ios/Runner/GoogleService-Info.plist
+mobile/android/app/google-services.json
