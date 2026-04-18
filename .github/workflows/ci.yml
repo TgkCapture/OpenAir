@@ -85,6 +85,13 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Create dummy Firebase config for CI
+        run: |
+          mkdir -p mobile/android/app
+          echo '{"project_info":{"project_id":"openair-ci"},"client":[{"client_info":{"mobilesdk_app_id":"1:000000000000:android:0000000000000000"},"api_key":[{"current_key":"dummy"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}' > mobile/android/app/google-services.json
+          mkdir -p mobile/ios/Runner
+          cp mobile/ios/Runner/GoogleService-Info.plist.example mobile/ios/Runner/GoogleService-Info.plist 2>/dev/null || echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>API_KEY</key><string>dummy</string><key>BUNDLE_ID</key><string>com.tgkcapture.openair</string><key>PROJECT_ID</key><string>openair-ci</string><key>STORAGE_BUCKET</key><string>openair-ci.appspot.com</string><key>GCM_SENDER_ID</key><string>000000000000</string><key>GOOGLE_APP_ID</key><string>1:000000000000:ios:0000000000000000</string></dict></plist>' > mobile/ios/Runner/GoogleService-Info.plist
+
       - name: Install dependencies
         working-directory: ./mobile
         run: flutter pub get
