@@ -1,0 +1,112 @@
+version: "3.9"
+
+networks:
+  openair-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  hls-data:
+
+services:
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: openair-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=development
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - openair-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: openair-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - openair-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: openair-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - openair-network
+
+  nginx-rtmp:
+    build:
+      context: ./streaming
+      dockerfile: Dockerfile
+    container_name: openair-streaming
+    restart: unless-stopped
+    ports:
+      - "1935:1935"
+      - "8080:8080"
+    volumes:
+      - hls-data:/tmp/hls
+      - ./streaming/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - openair-network
+
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile.dev
+    container_name: openair-admin
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./admin:/app
+      - /app/node_modules
+    env_file:
+      - .env
+    networks:
+      - openair-network
+
+  adminer:
+    image: adminer:latest
+    container_name: openair-adminer
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    depends_on:
+      - postgres
+    networks:
+      - openair-network
