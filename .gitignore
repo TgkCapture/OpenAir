@@ -25,3 +25,4 @@ docker-compose.override.yml
 Thumbs.db
 mobile/ios/Runner/GoogleService-Info.plist
 mobile/android/app/google-services.json
+backend/tmp/main
