@@ -24,6 +24,10 @@ func main() {
     }
     defer db.Close()
 
+    if err := database.RunMigrations(cfg); err != nil {
+        log.Fatalf("failed to run migrations: %v", err)
+    }
+
     rdb, err := cache.Connect(cfg)
     if err != nil {
         log.Fatalf("failed to connect to redis: %v", err)
