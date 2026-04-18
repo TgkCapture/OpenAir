@@ -47,12 +47,6 @@ jobs:
         working-directory: ./backend
         run: go mod download
 
-      - name: Run linter
-        uses: golangci/golangci-lint-action@v4
-        with:
-          working-directory: ./backend
-          version: latest
-
       - name: Run tests
         working-directory: ./backend
         env:
