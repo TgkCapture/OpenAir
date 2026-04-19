@@ -96,7 +96,7 @@ jobs:
 
       - name: Run tests
         working-directory: ./mobile
-        run: flutter test --coverage
+        run: flutter test
 
   admin-test:
     name: React Admin Tests
