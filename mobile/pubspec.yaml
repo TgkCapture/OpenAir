@@ -44,3 +44,24 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   bloc_test: ^9.1.7
   mocktail: ^1.0.3
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/openair_icon_512x512.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#0F0F0F"
+  adaptive_icon_foreground: "assets/icons/openair_icon_512x512.png"
+  remove_alpha_ios: true
+  web:
+    generate: false
+  windows:
+    generate: false
+  macos:
+    generate: false
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/
