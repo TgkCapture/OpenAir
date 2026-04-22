@@ -26,4 +26,8 @@ Thumbs.db
 mobile/ios/Runner/GoogleService-Info.plist
 mobile/android/app/google-services.json
 backend/tmp/main
+<<<<<<< TgkCapture/issue13
 backend/config/keys/
+=======
+backend/config/keys/
+>>>>>>> develop
