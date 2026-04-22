@@ -6,9 +6,12 @@ import 'package:openair/features/settings/bloc/settings_bloc.dart';
 
 final getIt = GetIt.instance;
 
-void configureDependencies() {
-  getIt.registerLazySingleton<ApiService>(() => ApiService());
-  getIt.registerLazySingleton<AuthRepository>(() => AuthRepository(getIt<ApiService>()));
+Future<void> configureDependencies() async {
+  final apiService = await ApiService.create();
+  getIt.registerSingleton<ApiService>(apiService);
+  getIt.registerLazySingleton<AuthRepository>(
+    () => AuthRepository(getIt<ApiService>()),
+  );
   getIt.registerFactory<AuthBloc>(() => AuthBloc(getIt<AuthRepository>()));
   getIt.registerFactory<SettingsBloc>(() => SettingsBloc());
 }

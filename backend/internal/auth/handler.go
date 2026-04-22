@@ -2,10 +2,11 @@ package auth
 
 import (
 	"errors"
+	"log"
 	// "net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/TgkCapture/openair/pkg/utils"
+	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
@@ -25,6 +26,7 @@ func (h *Handler) Register(c *gin.Context) {
 
 	resp, err := h.svc.Register(c.Request.Context(), req)
 	if err != nil {
+		log.Printf("ERROR register: %v", err)
 		if errors.Is(err, ErrEmailTaken) {
 			utils.Conflict(c, "EMAIL_TAKEN", "email already registered")
 			return
@@ -44,6 +46,7 @@ func (h *Handler) Login(c *gin.Context) {
 
 	resp, err := h.svc.Login(c.Request.Context(), req)
 	if err != nil {
+		log.Printf("ERROR login: %v", err)
 		if errors.Is(err, ErrInvalidCredentials) || errors.Is(err, ErrAccountDisabled) {
 			utils.Unauthorized(c, "INVALID_CREDENTIALS", err.Error())
 			return
@@ -57,6 +60,7 @@ func (h *Handler) Login(c *gin.Context) {
 func (h *Handler) RefreshToken(c *gin.Context) {
 	var req RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("ERROR refresh token: %v", err)
 		utils.BadRequest(c, "VALIDATION_ERROR", err.Error())
 		return
 	}

@@ -6,6 +6,6 @@ import 'package:openair/core/di/injection.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
-  configureDependencies();
+  await configureDependencies();
   runApp(const OpenAirApp());
 }
