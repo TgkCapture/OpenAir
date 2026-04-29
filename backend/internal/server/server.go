@@ -11,6 +11,7 @@ import (
 	"github.com/TgkCapture/openair/pkg/config"
 	"github.com/TgkCapture/openair/pkg/middleware"
 	"github.com/TgkCapture/openair/pkg/token"
+	"github.com/TgkCapture/openair/internal/content"
 )
 
 type Server struct {
@@ -83,6 +84,16 @@ func (s *Server) setupRoutes() {
 	v1.GET("/channels/:id", channelHandler.GetByID)
 	v1.GET("/channels/:id/stream", channelHandler.GetPublicStreamURL)
 
+	// Content / VOD
+	contentRepo := content.NewRepository(s.db)
+	contentSvc := content.NewService(contentRepo, s.cfg)
+	contentHandler := content.NewHandler(contentSvc)
+
+	v1.GET("/vod", contentHandler.GetAll)
+	v1.GET("/vod/categories", contentHandler.GetCategories)
+	v1.GET("/vod/:id", contentHandler.GetByID)
+	v1.GET("/vod/:id/stream", contentHandler.GetPublicStreamURL)
+
 	// Protected routes
 	protected := v1.Group("")
 	protected.Use(middleware.Auth(s.tokenManager))
@@ -94,6 +105,10 @@ func (s *Server) setupRoutes() {
 		// Channels — authenticated stream URL
 		protected.GET("/channels/:id/stream/secure", channelHandler.GetStreamURL)
 
+		protected.GET("/vod/:id/stream/secure", contentHandler.GetStreamURL)
+		protected.POST("/watch-history", contentHandler.SaveWatchHistory)
+		protected.GET("/watch-history", contentHandler.GetWatchHistory)
+
 		// Admin only
 		admin := protected.Group("/admin")
 		admin.Use(middleware.RequireRole("admin"))
@@ -102,6 +117,10 @@ func (s *Server) setupRoutes() {
 			admin.PUT("/channels/:id", channelHandler.Update)
 			admin.DELETE("/channels/:id", channelHandler.Delete)
 			admin.PATCH("/channels/:id/access", channelHandler.ToggleAccess)
+
+			admin.POST("/vod", contentHandler.Create)
+			admin.PUT("/vod/:id", contentHandler.Update)
+			admin.PATCH("/vod/:id/access", contentHandler.ToggleAccess)
 		}
 	}
 }
