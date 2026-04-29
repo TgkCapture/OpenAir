@@ -31,3 +31,4 @@ backend/config/keys/
 =======
 backend/config/keys/
 >>>>>>> develop
+.env.dev
