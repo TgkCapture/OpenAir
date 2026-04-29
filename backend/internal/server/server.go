@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/TgkCapture/openair/internal/auth"
 	"github.com/TgkCapture/openair/internal/channels"
@@ -10,6 +11,7 @@ import (
 	"github.com/TgkCapture/openair/pkg/config"
 	"github.com/TgkCapture/openair/pkg/middleware"
 	"github.com/TgkCapture/openair/pkg/token"
+	"github.com/TgkCapture/openair/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -135,6 +137,57 @@ func (s *Server) setupRoutes() {
 
 			admin.POST("/podcasts", podcastHandler.CreatePodcast)
 			admin.POST("/podcasts/episodes", podcastHandler.CreateEpisode)
+
+			admin.GET("/users", func(c *gin.Context) {
+				rows, err := s.db.Query(c.Request.Context(), `
+					SELECT id, email, full_name, role, is_active, created_at
+					FROM users ORDER BY created_at DESC`)
+				if err != nil {
+					utils.InternalError(c)
+					return
+				}
+				defer rows.Close()
+
+				type UserRow struct {
+					ID        string    `json:"id"`
+					Email     string    `json:"email"`
+					FullName  string    `json:"full_name"`
+					Role      string    `json:"role"`
+					IsActive  bool      `json:"is_active"`
+					CreatedAt time.Time `json:"created_at"`
+				}
+
+				var users []UserRow
+				for rows.Next() {
+					var u UserRow
+					if err := rows.Scan(&u.ID, &u.Email, &u.FullName, &u.Role, &u.IsActive, &u.CreatedAt); err != nil {
+						continue
+					}
+					users = append(users, u)
+				}
+				if users == nil {
+					users = []UserRow{}
+				}
+				utils.OK(c, users)
+			})
+
+			admin.PATCH("/users/:id/status", func(c *gin.Context) {
+				var body struct {
+					IsActive bool `json:"is_active"`
+				}
+				if err := c.ShouldBindJSON(&body); err != nil {
+					utils.BadRequest(c, "VALIDATION_ERROR", err.Error())
+					return
+				}
+				_, err := s.db.Exec(c.Request.Context(),
+					`UPDATE users SET is_active=$2, updated_at=NOW() WHERE id=$1`,
+					c.Param("id"), body.IsActive)
+				if err != nil {
+					utils.InternalError(c)
+					return
+				}
+				utils.OK(c, gin.H{"message": "updated"})
+			})
 		}
 	}
 }
