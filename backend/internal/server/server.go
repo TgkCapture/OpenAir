@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/TgkCapture/openair/internal/auth"
+	"github.com/TgkCapture/openair/internal/channels"
 	"github.com/TgkCapture/openair/pkg/config"
 	"github.com/TgkCapture/openair/pkg/middleware"
 	"github.com/TgkCapture/openair/pkg/token"
@@ -59,11 +60,11 @@ func (s *Server) setupRoutes() {
 
 	v1 := s.router.Group("/api/v1")
 
+	// Auth
 	authRepo := auth.NewRepository(s.db)
 	authSvc := auth.NewService(authRepo, s.tokenManager, s.cfg)
 	authHandler := auth.NewHandler(authSvc)
 
-	// Public auth routes
 	authRoutes := v1.Group("/auth")
 	{
 		authRoutes.POST("/register", authHandler.Register)
@@ -73,6 +74,15 @@ func (s *Server) setupRoutes() {
 		authRoutes.POST("/reset-password", authHandler.ResetPassword)
 	}
 
+	// Channels — public
+	channelRepo := channels.NewRepository(s.db)
+	channelSvc := channels.NewService(channelRepo, s.cfg)
+	channelHandler := channels.NewHandler(channelSvc)
+
+	v1.GET("/channels", channelHandler.GetAll)
+	v1.GET("/channels/:id", channelHandler.GetByID)
+	v1.GET("/channels/:id/stream", channelHandler.GetPublicStreamURL)
+
 	// Protected routes
 	protected := v1.Group("")
 	protected.Use(middleware.Auth(s.tokenManager))
@@ -80,6 +90,19 @@ func (s *Server) setupRoutes() {
 		protected.POST("/auth/logout", authHandler.Logout)
 		protected.GET("/users/me", authHandler.GetProfile)
 		protected.PUT("/users/me", authHandler.UpdateProfile)
+
+		// Channels — authenticated stream URL
+		protected.GET("/channels/:id/stream/secure", channelHandler.GetStreamURL)
+
+		// Admin only
+		admin := protected.Group("/admin")
+		admin.Use(middleware.RequireRole("admin"))
+		{
+			admin.POST("/channels", channelHandler.Create)
+			admin.PUT("/channels/:id", channelHandler.Update)
+			admin.DELETE("/channels/:id", channelHandler.Delete)
+			admin.PATCH("/channels/:id/access", channelHandler.ToggleAccess)
+		}
 	}
 }
 
