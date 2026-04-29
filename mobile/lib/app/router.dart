@@ -8,10 +8,14 @@ import 'package:openair/features/radio/screens/radio_screen.dart';
 import 'package:openair/features/library/screens/library_screen.dart';
 import 'package:openair/features/profile/screens/profile_screen.dart';
 import 'package:openair/app/shell.dart';
+import 'package:flutter/foundation.dart';
 
 class AppRouter {
+  // Set to true to bypass login during development
+  static const bool _bypassAuth = kDebugMode;
+
   static final router = GoRouter(
-    initialLocation: '/login',
+    initialLocation: _bypassAuth ? '/home' : '/login',
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
