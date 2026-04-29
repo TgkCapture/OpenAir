@@ -188,6 +188,50 @@ func (s *Server) setupRoutes() {
 				}
 				utils.OK(c, gin.H{"message": "updated"})
 			})
+
+			admin.GET("/analytics", func(c *gin.Context) {
+				type Analytics struct {
+					TotalUsers    int `json:"total_users"`
+					TotalChannels int `json:"total_channels"`
+					TotalVod      int `json:"total_vod"`
+					TotalPodcasts int `json:"total_podcasts"`
+					TotalViews    int `json:"total_views"`
+					TopContent    []struct {
+						Title     string `json:"title"`
+						ViewCount int    `json:"view_count"`
+					} `json:"top_content"`
+				}
+
+				var a Analytics
+				ctx := c.Request.Context()
+
+				s.db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&a.TotalUsers)
+				s.db.QueryRow(ctx, `SELECT COUNT(*) FROM channels WHERE is_active=true`).Scan(&a.TotalChannels)
+				s.db.QueryRow(ctx, `SELECT COUNT(*) FROM content WHERE type='vod' AND is_published=true`).Scan(&a.TotalVod)
+				s.db.QueryRow(ctx, `SELECT COUNT(*) FROM podcasts WHERE is_active=true`).Scan(&a.TotalPodcasts)
+				s.db.QueryRow(ctx, `SELECT COALESCE(SUM(view_count),0) FROM content`).Scan(&a.TotalViews)
+
+				rows, err := s.db.Query(ctx,
+					`SELECT title, view_count FROM content WHERE is_published=true ORDER BY view_count DESC LIMIT 5`)
+				if err == nil {
+					defer rows.Close()
+					for rows.Next() {
+						var item struct {
+							Title     string `json:"title"`
+							ViewCount int    `json:"view_count"`
+						}
+						rows.Scan(&item.Title, &item.ViewCount)
+						a.TopContent = append(a.TopContent, item)
+					}
+				}
+				if a.TopContent == nil {
+					a.TopContent = []struct {
+						Title     string `json:"title"`
+						ViewCount int    `json:"view_count"`
+					}{}
+				}
+				utils.OK(c, a)
+			})
 		}
 	}
 }
