@@ -232,6 +232,30 @@ func (s *Server) setupRoutes() {
 				}
 				utils.OK(c, a)
 			})
+
+			v1.GET("/config", func(c *gin.Context) {
+				type Config struct {
+					Broadcaster    string  `json:"broadcaster"`
+					PrimaryColor   string  `json:"primary_color"`
+					LogoURL        *string `json:"logo_url"`
+					EnableVod      bool    `json:"enable_vod"`
+					EnablePodcasts bool    `json:"enable_podcasts"`
+					EnableRadio    bool    `json:"enable_radio"`
+				}
+				var cfg Config
+				err := s.db.QueryRow(c.Request.Context(), `
+					SELECT broadcaster, primary_color, logo_url,
+						enable_vod, enable_podcasts, enable_radio
+					FROM app_config LIMIT 1`).Scan(
+					&cfg.Broadcaster, &cfg.PrimaryColor, &cfg.LogoURL,
+					&cfg.EnableVod, &cfg.EnablePodcasts, &cfg.EnableRadio,
+				)
+				if err != nil {
+					utils.InternalError(c)
+					return
+				}
+				utils.OK(c, cfg)
+			})
 		}
 	}
 }
