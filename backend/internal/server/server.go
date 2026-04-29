@@ -105,6 +105,30 @@ func (s *Server) setupRoutes() {
 	v1.GET("/podcasts/:id", podcastHandler.GetByID)
 	v1.GET("/podcasts/:id/episodes", podcastHandler.GetEpisodes)
 
+	v1.GET("/config", func(c *gin.Context) {
+		type Config struct {
+			Broadcaster    string  `json:"broadcaster"`
+			PrimaryColor   string  `json:"primary_color"`
+			LogoURL        *string `json:"logo_url"`
+			EnableVod      bool    `json:"enable_vod"`
+			EnablePodcasts bool    `json:"enable_podcasts"`
+			EnableRadio    bool    `json:"enable_radio"`
+		}
+		var cfg Config
+		err := s.db.QueryRow(c.Request.Context(), `
+			SELECT broadcaster, primary_color, logo_url,
+				enable_vod, enable_podcasts, enable_radio
+			FROM app_config LIMIT 1`).Scan(
+			&cfg.Broadcaster, &cfg.PrimaryColor, &cfg.LogoURL,
+			&cfg.EnableVod, &cfg.EnablePodcasts, &cfg.EnableRadio,
+		)
+		if err != nil {
+			utils.InternalError(c)
+			return
+		}
+		utils.OK(c, cfg)
+	})
+
 	// Protected routes
 	protected := v1.Group("")
 	protected.Use(middleware.Auth(s.tokenManager))
@@ -233,7 +257,7 @@ func (s *Server) setupRoutes() {
 				utils.OK(c, a)
 			})
 
-			v1.GET("/config", func(c *gin.Context) {
+			admin.PUT("/config", func(c *gin.Context) {
 				type Config struct {
 					Broadcaster    string  `json:"broadcaster"`
 					PrimaryColor   string  `json:"primary_color"`
@@ -243,12 +267,15 @@ func (s *Server) setupRoutes() {
 					EnableRadio    bool    `json:"enable_radio"`
 				}
 				var cfg Config
-				err := s.db.QueryRow(c.Request.Context(), `
-					SELECT broadcaster, primary_color, logo_url,
-						enable_vod, enable_podcasts, enable_radio
-					FROM app_config LIMIT 1`).Scan(
-					&cfg.Broadcaster, &cfg.PrimaryColor, &cfg.LogoURL,
-					&cfg.EnableVod, &cfg.EnablePodcasts, &cfg.EnableRadio,
+				if err := c.ShouldBindJSON(&cfg); err != nil {
+					utils.BadRequest(c, "VALIDATION_ERROR", err.Error())
+					return
+				}
+				_, err := s.db.Exec(c.Request.Context(), `
+					UPDATE app_config SET broadcaster=$1, primary_color=$2, logo_url=$3,
+						enable_vod=$4, enable_podcasts=$5, enable_radio=$6, updated_at=NOW()`,
+					cfg.Broadcaster, cfg.PrimaryColor, cfg.LogoURL,
+					cfg.EnableVod, cfg.EnablePodcasts, cfg.EnableRadio,
 				)
 				if err != nil {
 					utils.InternalError(c)
@@ -256,6 +283,8 @@ func (s *Server) setupRoutes() {
 				}
 				utils.OK(c, cfg)
 			})
+
+			
 		}
 	}
 }
