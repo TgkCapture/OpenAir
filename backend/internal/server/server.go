@@ -3,15 +3,16 @@ package server
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
 	"github.com/TgkCapture/openair/internal/auth"
 	"github.com/TgkCapture/openair/internal/channels"
+	"github.com/TgkCapture/openair/internal/content"
+	"github.com/TgkCapture/openair/internal/podcasts"
 	"github.com/TgkCapture/openair/pkg/config"
 	"github.com/TgkCapture/openair/pkg/middleware"
 	"github.com/TgkCapture/openair/pkg/token"
-	"github.com/TgkCapture/openair/internal/content"
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 type Server struct {
@@ -94,6 +95,14 @@ func (s *Server) setupRoutes() {
 	v1.GET("/vod/:id", contentHandler.GetByID)
 	v1.GET("/vod/:id/stream", contentHandler.GetPublicStreamURL)
 
+	podcastRepo := podcasts.NewRepository(s.db)
+	podcastSvc := podcasts.NewService(podcastRepo)
+	podcastHandler := podcasts.NewHandler(podcastSvc)
+
+	v1.GET("/podcasts", podcastHandler.GetAll)
+	v1.GET("/podcasts/:id", podcastHandler.GetByID)
+	v1.GET("/podcasts/:id/episodes", podcastHandler.GetEpisodes)
+
 	// Protected routes
 	protected := v1.Group("")
 	protected.Use(middleware.Auth(s.tokenManager))
@@ -109,6 +118,8 @@ func (s *Server) setupRoutes() {
 		protected.POST("/watch-history", contentHandler.SaveWatchHistory)
 		protected.GET("/watch-history", contentHandler.GetWatchHistory)
 
+		protected.GET("/podcasts/:id/episodes/:episodeId/stream", podcastHandler.GetEpisodeStreamURL)
+
 		// Admin only
 		admin := protected.Group("/admin")
 		admin.Use(middleware.RequireRole("admin"))
@@ -121,6 +132,9 @@ func (s *Server) setupRoutes() {
 			admin.POST("/vod", contentHandler.Create)
 			admin.PUT("/vod/:id", contentHandler.Update)
 			admin.PATCH("/vod/:id/access", contentHandler.ToggleAccess)
+
+			admin.POST("/podcasts", podcastHandler.CreatePodcast)
+			admin.POST("/podcasts/episodes", podcastHandler.CreateEpisode)
 		}
 	}
 }
