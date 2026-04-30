@@ -1,7 +1,11 @@
 package server
 
 import (
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/TgkCapture/openair/internal/auth"
@@ -63,6 +67,8 @@ func (s *Server) setupRoutes() {
 			"version": "1.0.0",
 		})
 	})
+
+	s.router.Static("/uploads", "./uploads")
 
 	v1 := s.router.Group("/api/v1")
 
@@ -301,6 +307,35 @@ func (s *Server) setupRoutes() {
 				utils.OK(c, cfg)
 			})
 
+			admin.POST("/upload", func(c *gin.Context) {
+				file, header, err := c.Request.FormFile("file")
+				if err != nil {
+					utils.BadRequest(c, "VALIDATION_ERROR", "no file provided")
+					return
+				}
+				defer file.Close()
+
+				// For now save locally to uploads/ dir — swap for S3 in production
+				uploadDir := "./uploads"
+				os.MkdirAll(uploadDir, 0755)
+
+				filename := fmt.Sprintf("%d_%s", time.Now().UnixMilli(), header.Filename)
+				dst := filepath.Join(uploadDir, filename)
+
+				out, err := os.Create(dst)
+				if err != nil {
+					utils.InternalError(c)
+					return
+				}
+				defer out.Close()
+				io.Copy(out, file)
+
+				// Return URL — in prod this would be S3/CDN URL
+				url := fmt.Sprintf("%s/uploads/%s",
+					getEnv("APP_BASE_URL", "http://localhost:8000"), filename)
+				utils.OK(c, gin.H{"url": url})
+			})
+
 			admin.POST("/schedule", scheduleHandler.Create)
 			admin.PUT("/schedule/:id", scheduleHandler.Update)
 			admin.DELETE("/schedule/:id", scheduleHandler.Delete)
@@ -321,4 +356,11 @@ func corsMiddleware() gin.HandlerFunc {
 		}
 		c.Next()
 	}
+}
+
+func getEnv(key, fallback string) string {
+    if v := os.Getenv(key); v != "" {
+        return v
+    }
+    return fallback
 }
