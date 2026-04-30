@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/TgkCapture/openair/internal/auth"
 	"github.com/TgkCapture/openair/internal/channels"
@@ -10,6 +11,7 @@ import (
 	"github.com/TgkCapture/openair/pkg/config"
 	"github.com/TgkCapture/openair/pkg/middleware"
 	"github.com/TgkCapture/openair/pkg/token"
+	"github.com/TgkCapture/openair/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -103,6 +105,30 @@ func (s *Server) setupRoutes() {
 	v1.GET("/podcasts/:id", podcastHandler.GetByID)
 	v1.GET("/podcasts/:id/episodes", podcastHandler.GetEpisodes)
 
+	v1.GET("/config", func(c *gin.Context) {
+		type Config struct {
+			Broadcaster    string  `json:"broadcaster"`
+			PrimaryColor   string  `json:"primary_color"`
+			LogoURL        *string `json:"logo_url"`
+			EnableVod      bool    `json:"enable_vod"`
+			EnablePodcasts bool    `json:"enable_podcasts"`
+			EnableRadio    bool    `json:"enable_radio"`
+		}
+		var cfg Config
+		err := s.db.QueryRow(c.Request.Context(), `
+			SELECT broadcaster, primary_color, logo_url,
+				enable_vod, enable_podcasts, enable_radio
+			FROM app_config LIMIT 1`).Scan(
+			&cfg.Broadcaster, &cfg.PrimaryColor, &cfg.LogoURL,
+			&cfg.EnableVod, &cfg.EnablePodcasts, &cfg.EnableRadio,
+		)
+		if err != nil {
+			utils.InternalError(c)
+			return
+		}
+		utils.OK(c, cfg)
+	})
+
 	// Protected routes
 	protected := v1.Group("")
 	protected.Use(middleware.Auth(s.tokenManager))
@@ -135,6 +161,130 @@ func (s *Server) setupRoutes() {
 
 			admin.POST("/podcasts", podcastHandler.CreatePodcast)
 			admin.POST("/podcasts/episodes", podcastHandler.CreateEpisode)
+
+			admin.GET("/users", func(c *gin.Context) {
+				rows, err := s.db.Query(c.Request.Context(), `
+					SELECT id, email, full_name, role, is_active, created_at
+					FROM users ORDER BY created_at DESC`)
+				if err != nil {
+					utils.InternalError(c)
+					return
+				}
+				defer rows.Close()
+
+				type UserRow struct {
+					ID        string    `json:"id"`
+					Email     string    `json:"email"`
+					FullName  string    `json:"full_name"`
+					Role      string    `json:"role"`
+					IsActive  bool      `json:"is_active"`
+					CreatedAt time.Time `json:"created_at"`
+				}
+
+				var users []UserRow
+				for rows.Next() {
+					var u UserRow
+					if err := rows.Scan(&u.ID, &u.Email, &u.FullName, &u.Role, &u.IsActive, &u.CreatedAt); err != nil {
+						continue
+					}
+					users = append(users, u)
+				}
+				if users == nil {
+					users = []UserRow{}
+				}
+				utils.OK(c, users)
+			})
+
+			admin.PATCH("/users/:id/status", func(c *gin.Context) {
+				var body struct {
+					IsActive bool `json:"is_active"`
+				}
+				if err := c.ShouldBindJSON(&body); err != nil {
+					utils.BadRequest(c, "VALIDATION_ERROR", err.Error())
+					return
+				}
+				_, err := s.db.Exec(c.Request.Context(),
+					`UPDATE users SET is_active=$2, updated_at=NOW() WHERE id=$1`,
+					c.Param("id"), body.IsActive)
+				if err != nil {
+					utils.InternalError(c)
+					return
+				}
+				utils.OK(c, gin.H{"message": "updated"})
+			})
+
+			admin.GET("/analytics", func(c *gin.Context) {
+				type Analytics struct {
+					TotalUsers    int `json:"total_users"`
+					TotalChannels int `json:"total_channels"`
+					TotalVod      int `json:"total_vod"`
+					TotalPodcasts int `json:"total_podcasts"`
+					TotalViews    int `json:"total_views"`
+					TopContent    []struct {
+						Title     string `json:"title"`
+						ViewCount int    `json:"view_count"`
+					} `json:"top_content"`
+				}
+
+				var a Analytics
+				ctx := c.Request.Context()
+
+				s.db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&a.TotalUsers)
+				s.db.QueryRow(ctx, `SELECT COUNT(*) FROM channels WHERE is_active=true`).Scan(&a.TotalChannels)
+				s.db.QueryRow(ctx, `SELECT COUNT(*) FROM content WHERE type='vod' AND is_published=true`).Scan(&a.TotalVod)
+				s.db.QueryRow(ctx, `SELECT COUNT(*) FROM podcasts WHERE is_active=true`).Scan(&a.TotalPodcasts)
+				s.db.QueryRow(ctx, `SELECT COALESCE(SUM(view_count),0) FROM content`).Scan(&a.TotalViews)
+
+				rows, err := s.db.Query(ctx,
+					`SELECT title, view_count FROM content WHERE is_published=true ORDER BY view_count DESC LIMIT 5`)
+				if err == nil {
+					defer rows.Close()
+					for rows.Next() {
+						var item struct {
+							Title     string `json:"title"`
+							ViewCount int    `json:"view_count"`
+						}
+						rows.Scan(&item.Title, &item.ViewCount)
+						a.TopContent = append(a.TopContent, item)
+					}
+				}
+				if a.TopContent == nil {
+					a.TopContent = []struct {
+						Title     string `json:"title"`
+						ViewCount int    `json:"view_count"`
+					}{}
+				}
+				utils.OK(c, a)
+			})
+
+			admin.PUT("/config", func(c *gin.Context) {
+				type Config struct {
+					Broadcaster    string  `json:"broadcaster"`
+					PrimaryColor   string  `json:"primary_color"`
+					LogoURL        *string `json:"logo_url"`
+					EnableVod      bool    `json:"enable_vod"`
+					EnablePodcasts bool    `json:"enable_podcasts"`
+					EnableRadio    bool    `json:"enable_radio"`
+				}
+				var cfg Config
+				if err := c.ShouldBindJSON(&cfg); err != nil {
+					utils.BadRequest(c, "VALIDATION_ERROR", err.Error())
+					return
+				}
+				_, err := s.db.Exec(c.Request.Context(), `
+					UPDATE app_config SET broadcaster=$1, primary_color=$2, logo_url=$3,
+						enable_vod=$4, enable_podcasts=$5, enable_radio=$6, updated_at=NOW()`,
+					cfg.Broadcaster, cfg.PrimaryColor, cfg.LogoURL,
+					cfg.EnableVod, cfg.EnablePodcasts, cfg.EnableRadio,
+				)
+				if err != nil {
+					utils.InternalError(c)
+					return
+				}
+				utils.OK(c, cfg)
+			})
+
+			
 		}
 	}
 }
