@@ -1,87 +1,71 @@
 import { useQuery } from "@tanstack/react-query";
-import { Users, Tv, Film, TrendingUp, Eye, Radio } from "lucide-react";
+import { Users, Tv, Film, Radio, Eye, TrendingUp, RefreshCw } from "lucide-react";
 import api from "../lib/api";
 
-interface Stats {
-  total_users: number;
-  total_channels: number;
-  total_vod: number;
-  total_podcasts: number;
-  total_views: number;
-  top_content: Array<{ title: string; view_count: number }>;
-}
-
 export default function AnalyticsPage() {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, refetch } = useQuery({
     queryKey: ["analytics"],
-    queryFn: async () => {
-      const res = await api.get("/admin/analytics");
-      return res.data.data as Stats;
-    },
+    queryFn: async () => (await api.get("/admin/analytics")).data.data,
     refetchInterval: 60_000,
   });
 
-  if (isLoading) {
-    return (
-      <div className="p-8 flex justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
-
   const cards = [
-    { label: "Total Users", value: stats?.total_users ?? 0, icon: Users, color: "text-blue-500" },
-    { label: "TV & Radio Channels", value: stats?.total_channels ?? 0, icon: Tv, color: "text-green-500" },
-    { label: "VOD Videos", value: stats?.total_vod ?? 0, icon: Film, color: "text-purple-500" },
-    { label: "Podcasts", value: stats?.total_podcasts ?? 0, icon: Radio, color: "text-orange-500" },
-    { label: "Total Views", value: stats?.total_views ?? 0, icon: Eye, color: "text-red-500" },
+    { label: "Total Users",    value: stats?.total_users,    icon: Users,  color: "#3B82F6", bg: "rgba(59,130,246,0.1)" },
+    { label: "Active Channels",value: stats?.total_channels, icon: Tv,     color: "#10B981", bg: "rgba(16,185,129,0.1)" },
+    { label: "VOD Videos",     value: stats?.total_vod,      icon: Film,   color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" },
+    { label: "Podcasts",       value: stats?.total_podcasts, icon: Radio,  color: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
+    { label: "Total Views",    value: stats?.total_views,    icon: Eye,    color: "#E63946", bg: "rgba(230,57,70,0.1)"  },
   ];
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Analytics</h1>
-        <span className="text-xs text-gray-400">Refreshes every 60s</span>
+    <div style={{ padding: "32px" }}>
+      <div className="page-header">
+        <h1 className="page-title">Analytics</h1>
+        <button className="btn-ghost" onClick={() => refetch()} style={{ gap: 6 }}>
+          <RefreshCw size={13} /> Refresh
+        </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
-        {cards.map(({ label, value, icon: Icon, color }) => (
-          <div key={label}
-            className="bg-white dark:bg-surface rounded-xl p-4 border border-gray-200 dark:border-gray-800">
-            <div className={`${color} mb-2`}><Icon size={20} /></div>
-            <div className="text-2xl font-bold">{value.toLocaleString()}</div>
-            <div className="text-xs text-gray-500 mt-1">{label}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12, marginBottom: 32 }}>
+        {cards.map(({ label, value, icon: Icon, color, bg }) => (
+          <div key={label} className="stat-card">
+            <div className="stat-icon" style={{ background: bg }}>
+              <Icon size={16} style={{ color }} />
+            </div>
+            {isLoading ? (
+              <div style={{ height: 32, width: 64, background: "var(--border)", borderRadius: 6, marginBottom: 4 }} />
+            ) : (
+              <div className="stat-value">{typeof value === "number" ? value.toLocaleString() : "—"}</div>
+            )}
+            <div className="stat-label">{label}</div>
           </div>
         ))}
       </div>
 
-      {stats?.top_content && stats.top_content.length > 0 && (
-        <div className="bg-white dark:bg-surface rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={18} className="text-primary" />
-            <h2 className="font-semibold">Top Content by Views</h2>
+      {stats?.top_content?.length > 0 && (
+        <div className="card" style={{ padding: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
+            <TrendingUp size={16} style={{ color: "var(--primary)" }} />
+            <h2 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>Top Content by Views</h2>
           </div>
-          <div className="space-y-3">
-            {stats.top_content.map((item, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className="text-xs font-bold text-gray-400 w-5">{i + 1}</span>
-                <div className="flex-1">
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm font-medium truncate">{item.title}</span>
-                    <span className="text-xs text-gray-500 ml-2">{item.view_count} views</span>
-                  </div>
-                  <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full"
-                      style={{
-                        width: `${Math.min(100, (item.view_count / (stats.top_content[0]?.view_count || 1)) * 100)}%`
-                      }}
-                    />
-                  </div>
+          {stats.top_content.map((item: { title: string; view_count: number }, i: number) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: i < stats.top_content.length - 1 ? "1px solid var(--border)" : "none" }}>
+              <span style={{ width: 22, height: 22, borderRadius: 5, background: i === 0 ? "var(--primary-soft)" : "var(--bg)", color: i === 0 ? "var(--primary)" : "var(--text-3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                {i + 1}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>
+                  {item.title}
+                </div>
+                <div style={{ height: 4, background: "var(--border)", borderRadius: 2 }}>
+                  <div style={{ height: "100%", background: "var(--primary)", borderRadius: 2, width: `${Math.min(100, (item.view_count / (stats.top_content[0]?.view_count || 1)) * 100)}%` }} />
                 </div>
               </div>
-            ))}
-          </div>
+              <span style={{ fontSize: 12, color: "var(--text-3)", flexShrink: 0 }}>
+                {item.view_count.toLocaleString()}
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>

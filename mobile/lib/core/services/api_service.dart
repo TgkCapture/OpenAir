@@ -114,26 +114,26 @@ class ApiService {
     }
   }
 
-  static Future<List<String>> _gatewayCandidates() async {
-    final candidates = <String>[];
-    try {
-      final interfaces = await NetworkInterface.list(
-        type: InternetAddressType.IPv4,
-        includeLinkLocal: false,
-      );
-      for (final iface in interfaces) {
-        for (final addr in iface.addresses) {
-          final parts = addr.address.split('.');
-          if (parts.length == 4) {
-            // Try .1 and .2 of the same subnet (typical gateway/host IPs)
-            candidates.add('${parts[0]}.${parts[1]}.${parts[2]}.1');
-            candidates.add('${parts[0]}.${parts[1]}.${parts[2]}.2');
-          }
-        }
-      }
-    } catch (_) {}
-    return candidates;
-  }
+  // static Future<List<String>> _gatewayCandidates() async {
+  //   final candidates = <String>[];
+  //   try {
+  //     final interfaces = await NetworkInterface.list(
+  //       type: InternetAddressType.IPv4,
+  //       includeLinkLocal: false,
+  //     );
+  //     for (final iface in interfaces) {
+  //       for (final addr in iface.addresses) {
+  //         final parts = addr.address.split('.');
+  //         if (parts.length == 4) {
+  //           // Try .1 and .2 of the same subnet (typical gateway/host IPs)
+  //           candidates.add('${parts[0]}.${parts[1]}.${parts[2]}.1');
+  //           candidates.add('${parts[0]}.${parts[1]}.${parts[2]}.2');
+  //         }
+  //       }
+  //     }
+  //   } catch (_) {}
+  //   return candidates;
+  // }
 
   Dio get dio => _dio;
 

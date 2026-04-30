@@ -226,7 +226,7 @@ class _VodCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Colors.black.withValues(alpha:0.7),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(item.formattedDuration,
@@ -237,7 +237,7 @@ class _VodCard extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
-                      color: Colors.black.withOpacity(0.15),
+                      color: Colors.black.withValues(alpha:0.15),
                     ),
                     child: const Icon(Icons.play_circle_outline,
                         color: Colors.white, size: 40),
@@ -399,7 +399,7 @@ class _EpisodeListView extends StatelessWidget {
         // Now playing bar
         if (state.nowPlaying != null)
           Container(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha:0.1),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
