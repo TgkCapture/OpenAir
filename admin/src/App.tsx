@@ -9,7 +9,7 @@ import SchedulePage from "./pages/SchedulePage";
 import UsersPage from "./pages/UsersPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import SettingsPage from "./pages/SettingsPage";
-// import NotificationsPage from "./pages/NotificationsPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import { useAuthStore } from "./store/authStore";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -37,7 +37,7 @@ export default function App() {
         <Route path="schedule"      element={<SchedulePage />} />
         <Route path="users"         element={<UsersPage />} />
         <Route path="analytics"     element={<AnalyticsPage />} />
-        {/* <Route path="notifications" element={<NotificationsPage />} /> */}
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="settings"      element={<SettingsPage />} />
       </Route>
     </Routes>
