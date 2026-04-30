@@ -8,6 +8,7 @@ import (
 	"github.com/TgkCapture/openair/internal/channels"
 	"github.com/TgkCapture/openair/internal/content"
 	"github.com/TgkCapture/openair/internal/podcasts"
+	"github.com/TgkCapture/openair/internal/schedule"
 	"github.com/TgkCapture/openair/pkg/config"
 	"github.com/TgkCapture/openair/pkg/middleware"
 	"github.com/TgkCapture/openair/pkg/token"
@@ -128,6 +129,14 @@ func (s *Server) setupRoutes() {
 		}
 		utils.OK(c, cfg)
 	})
+
+	// Schedule
+	scheduleRepo := schedule.NewRepository(s.db)
+	scheduleHandler := schedule.NewHandler(scheduleRepo)
+
+	v1.GET("/schedule/now", scheduleHandler.GetAllNowAndNext)
+	v1.GET("/schedule/:channelId", scheduleHandler.GetByChannel)
+	v1.GET("/schedule/:channelId/now", scheduleHandler.GetNowAndNext)
 
 	// Protected routes
 	protected := v1.Group("")
@@ -283,6 +292,10 @@ func (s *Server) setupRoutes() {
 				}
 				utils.OK(c, cfg)
 			})
+
+			admin.POST("/schedule", scheduleHandler.Create)
+			admin.PUT("/schedule/:id", scheduleHandler.Update)
+			admin.DELETE("/schedule/:id", scheduleHandler.Delete)
 
 			
 		}
