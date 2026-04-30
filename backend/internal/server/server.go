@@ -7,6 +7,7 @@ import (
 	"github.com/TgkCapture/openair/internal/auth"
 	"github.com/TgkCapture/openair/internal/channels"
 	"github.com/TgkCapture/openair/internal/content"
+	"github.com/TgkCapture/openair/internal/notifications"
 	"github.com/TgkCapture/openair/internal/podcasts"
 	"github.com/TgkCapture/openair/internal/schedule"
 	"github.com/TgkCapture/openair/pkg/config"
@@ -138,6 +139,11 @@ func (s *Server) setupRoutes() {
 	v1.GET("/schedule/:channelId", scheduleHandler.GetByChannel)
 	v1.GET("/schedule/:channelId/now", scheduleHandler.GetNowAndNext)
 
+	// Notifications
+	notifRepo := notifications.NewRepository(s.db)
+	notifSvc := notifications.NewService(notifRepo, s.cfg)
+	notifHandler := notifications.NewHandler(notifSvc)
+
 	// Protected routes
 	protected := v1.Group("")
 	protected.Use(middleware.Auth(s.tokenManager))
@@ -170,6 +176,8 @@ func (s *Server) setupRoutes() {
 
 			admin.POST("/podcasts", podcastHandler.CreatePodcast)
 			admin.POST("/podcasts/episodes", podcastHandler.CreateEpisode)
+
+			admin.POST("/notify", notifHandler.Send)
 
 			admin.GET("/users", func(c *gin.Context) {
 				rows, err := s.db.Query(c.Request.Context(), `
