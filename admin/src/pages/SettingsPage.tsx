@@ -46,86 +46,136 @@ export default function SettingsPage() {
   });
 
   return (
-    <div className="p-8 max-w-2xl">
-      <h1 className="text-2xl font-semibold mb-8">App Settings & Branding</h1>
+    <div style={{ padding: "32px 32px 48px", maxWidth: 672 }}>
+      {/* Header */}
+      <div style={{ marginBottom: 32 }}>
+        <h1 className="page-title" style={{ marginBottom: 8 }}>App Settings & Branding</h1>
+        <p style={{ fontSize: 13, color: "var(--text-3)", margin: 0 }}>
+          Configure your application branding and features
+        </p>
+      </div>
 
-      <div className="space-y-6">
-        <div className="bg-white dark:bg-surface rounded-xl p-6 border border-gray-200 dark:border-gray-800">
-          <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <Radio size={18} className="text-primary" /> Branding
+      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        {/* Branding section */}
+        <div style={{
+          background: "var(--bg-surface)", borderRadius: "var(--radius-lg)",
+          padding: 24, border: "1px solid var(--border)",
+        }}>
+          <h2 style={{
+            fontSize: 14, fontWeight: 700, margin: "0 0 20px",
+            display: "flex", alignItems: "center", gap: 8, color: "var(--text)",
+          }}>
+            <Radio size={18} style={{ color: "var(--primary)" }} /> Branding
           </h2>
-          <div className="space-y-4">
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
-              <label className="block text-sm font-medium mb-1">Broadcaster Name</label>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--text)" }}>
+                Broadcaster Name
+              </label>
               <input
                 type="text"
                 value={form.broadcaster}
                 onChange={e => setForm(f => ({ ...f, broadcaster: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-background text-sm"
+                style={{
+                  width: "100%", padding: "8px 12px", borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--border)", background: "var(--bg)",
+                  color: "var(--text)", fontSize: 13,
+                }}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Primary Color</label>
-              <div className="flex gap-3 items-center">
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--text)" }}>
+                Primary Color
+              </label>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                 <input
                   type="color"
                   value={form.primary_color}
                   onChange={e => setForm(f => ({ ...f, primary_color: e.target.value }))}
-                  className="h-10 w-16 rounded border border-gray-300 cursor-pointer"
+                  style={{ width: 40, height: 40, borderRadius: "var(--radius-md)", border: "1px solid var(--border)", cursor: "pointer" }}
                 />
                 <input
                   type="text"
                   value={form.primary_color}
                   onChange={e => setForm(f => ({ ...f, primary_color: e.target.value }))}
-                  className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-background text-sm font-mono"
+                  style={{
+                    flex: 1, padding: "8px 12px", borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border)", background: "var(--bg)",
+                    color: "var(--text)", fontSize: 13, fontFamily: "monospace",
+                  }}
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Logo URL</label>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--text)" }}>
+                Logo URL
+              </label>
               <input
                 type="url"
                 value={form.logo_url ?? ""}
                 onChange={e => setForm(f => ({ ...f, logo_url: e.target.value || null }))}
                 placeholder="https://..."
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-background text-sm"
+                style={{
+                  width: "100%", padding: "8px 12px", borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--border)", background: "var(--bg)",
+                  color: "var(--text)", fontSize: 13,
+                }}
               />
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-surface rounded-xl p-6 border border-gray-200 dark:border-gray-800">
-          <h2 className="font-semibold mb-4">Feature Flags</h2>
-          <div className="space-y-3">
+        {/* Feature flags section */}
+        <div style={{
+          background: "var(--bg-surface)", borderRadius: "var(--radius-lg)",
+          padding: 24, border: "1px solid var(--border)",
+        }}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 20px", color: "var(--text)" }}>
+            Feature Flags
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             {[
               { key: "enable_vod", label: "Video on Demand (VOD)", desc: "Show VOD tab in mobile app" },
               { key: "enable_podcasts", label: "Podcasts", desc: "Show Podcasts in Library tab" },
               { key: "enable_radio", label: "Live Radio", desc: "Show Radio tab in mobile app" },
             ].map(({ key, label, desc }) => (
-              <div key={key} className="flex items-center justify-between py-2">
+              <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
-                  <p className="text-sm font-medium">{label}</p>
-                  <p className="text-xs text-gray-500">{desc}</p>
+                  <p style={{ fontSize: 13, fontWeight: 500, margin: 0, color: "var(--text)" }}>{label}</p>
+                  <p style={{ fontSize: 11, color: "var(--text-3)", margin: "2px 0 0" }}>{desc}</p>
                 </div>
                 <button
                   onClick={() => setForm(f => ({ ...f, [key]: !f[key as keyof AppConfig] }))}
-                  className={`relative w-11 h-6 rounded-full transition-colors ${
-                    form[key as keyof AppConfig] ? "bg-primary" : "bg-gray-300 dark:bg-gray-600"
-                  }`}
+                  style={{
+                    width: 44, height: 24, borderRadius: 999, border: "none",
+                    background: form[key as keyof AppConfig] ? "var(--primary)" : "var(--border)",
+                    cursor: "pointer", position: "relative", transition: "all 0.2s",
+                    flexShrink: 0,
+                  }}
                 >
-                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    form[key as keyof AppConfig] ? "translate-x-5" : ""
-                  }`} />
+                  <span style={{
+                    position: "absolute", top: 2, left: form[key as keyof AppConfig] ? 22 : 2,
+                    width: 20, height: 20, background: "white", borderRadius: "50%",
+                    transition: "all 0.2s",
+                  }} />
                 </button>
               </div>
             ))}
           </div>
         </div>
 
+        {/* Save button */}
         <button
           onClick={() => saveMutation.mutate(form)}
           disabled={saveMutation.isPending}
-          className="flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-60"
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            gap: 8, background: "var(--primary)", color: "white",
+            border: "none", padding: "10px 24px", borderRadius: "var(--radius-md)",
+            fontSize: 13, fontWeight: 600, cursor: "pointer", width: "fit-content",
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = "#DC2626"}
+          onMouseLeave={(e) => e.currentTarget.style.background = "var(--primary)"}
         >
           <Save size={16} />
           {saved ? "Saved!" : saveMutation.isPending ? "Saving..." : "Save Settings"}

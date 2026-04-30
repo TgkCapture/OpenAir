@@ -87,92 +87,170 @@ export default function ChannelsPage() {
   const filtered = channels.filter(c => filter === "all" || c.type === filter);
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Channels</h1>
+    <div style={{ padding: "32px 32px 48px" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div>
+          <h1 className="page-title" style={{ marginBottom: 4 }}>Channels</h1>
+          <p style={{ fontSize: 13, color: "var(--text-3)", margin: 0 }}>Manage TV and radio channels</p>
+        </div>
         <button
           onClick={() => { setEditing(null); setForm(empty); setShowForm(true); }}
-          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-red-600 transition-colors"
+          style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: "var(--primary)", color: "white",
+            border: "none", padding: "8px 16px", borderRadius: "var(--radius-md)",
+            fontSize: 13, fontWeight: 600, cursor: "pointer",
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = "#DC2626"}
+          onMouseLeave={(e) => e.currentTarget.style.background = "var(--primary)"}
         >
           <Plus size={16} /> Add Channel
         </button>
       </div>
 
-      <div className="flex gap-2 mb-6">
+      {/* Filter tabs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
         {(["all", "tv", "radio"] as const).map(f => (
-          <button key={f}
+          <button
+            key={f}
             onClick={() => setFilter(f)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              filter === f
-                ? "bg-primary text-white"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-            }`}
+            style={{
+              padding: "6px 16px", borderRadius: 999, fontSize: 13, fontWeight: 500,
+              cursor: "pointer", transition: "all 0.2s",
+              background: filter === f ? "var(--primary)" : "var(--bg)",
+              color: filter === f ? "white" : "var(--text-2)",
+              border: filter === f ? "none" : "1px solid var(--border)",
+            }}
           >
             {f === "all" ? "All" : f === "tv" ? "TV" : "Radio"}
           </button>
         ))}
       </div>
 
+      {/* Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-surface rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold mb-4">
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 50, padding: 16,
+        }}>
+          <div style={{
+            background: "var(--bg-surface)", borderRadius: "var(--radius-lg)",
+            padding: 24, width: "100%", maxWidth: 480,
+            border: "1px solid var(--border)",
+          }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 16px", color: "var(--text)" }}>
               {editing ? "Edit Channel" : "Add Channel"}
             </h2>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium mb-1">Name *</label>
-                <input type="text" value={form.name} required
+            <form onSubmit={handleSubmit}>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--text)" }}>
+                  Name *
+                </label>
+                <input
+                  type="text" value={form.name} required
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-background text-sm" />
+                  style={{
+                    width: "100%", padding: "8px 12px", borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border)", background: "var(--bg)",
+                    color: "var(--text)", fontSize: 13,
+                  }}
+                />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Type</label>
-                <select value={form.type}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--text)" }}>
+                  Type
+                </label>
+                <select
+                  value={form.type}
                   onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-background text-sm">
+                  style={{
+                    width: "100%", padding: "8px 12px", borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border)", background: "var(--bg)",
+                    color: "var(--text)", fontSize: 13,
+                  }}
+                >
                   <option value="tv">TV</option>
                   <option value="radio">Radio</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Stream URL *</label>
-                <input type="url" value={form.stream_url} required
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--text)" }}>
+                  Stream URL *
+                </label>
+                <input
+                  type="url" value={form.stream_url} required
                   onChange={e => setForm(f => ({ ...f, stream_url: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-background text-sm" />
+                  style={{
+                    width: "100%", padding: "8px 12px", borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border)", background: "var(--bg)",
+                    color: "var(--text)", fontSize: 13,
+                  }}
+                />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Logo URL</label>
-                <input type="url" value={form.logo_url}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--text)" }}>
+                  Logo URL
+                </label>
+                <input
+                  type="url" value={form.logo_url}
                   onChange={e => setForm(f => ({ ...f, logo_url: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-background text-sm" />
+                  style={{
+                    width: "100%", padding: "8px 12px", borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border)", background: "var(--bg)",
+                    color: "var(--text)", fontSize: 13,
+                  }}
+                />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Sort Order</label>
-                <input type="number" value={form.sort_order}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--text)" }}>
+                  Sort Order
+                </label>
+                <input
+                  type="number" value={form.sort_order}
                   onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-background text-sm" />
+                  style={{
+                    width: "100%", padding: "8px 12px", borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border)", background: "var(--bg)",
+                    color: "var(--text)", fontSize: 13,
+                  }}
+                />
               </div>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer", color: "var(--text)" }}>
                   <input type="checkbox" checked={form.is_premium}
                     onChange={e => setForm(f => ({ ...f, is_premium: e.target.checked }))} />
                   Premium
                 </label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer", color: "var(--text)" }}>
                   <input type="checkbox" checked={form.is_active}
                     onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
                   Active
                 </label>
               </div>
-              <div className="flex gap-3 pt-2">
-                <button type="submit"
-                  className="flex-1 bg-primary text-white py-2 rounded-lg text-sm font-medium hover:bg-red-600">
+              <div style={{ display: "flex", gap: 12 }}>
+                <button
+                  type="submit"
+                  style={{
+                    flex: 1, background: "var(--primary)", color: "white",
+                    border: "none", padding: "10px", borderRadius: "var(--radius-md)",
+                    fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "#DC2626"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "var(--primary)"}
+                >
                   {editing ? "Save" : "Add Channel"}
                 </button>
-                <button type="button"
+                <button
+                  type="button"
                   onClick={() => { setShowForm(false); setEditing(null); }}
-                  className="flex-1 border border-gray-300 dark:border-gray-700 py-2 rounded-lg text-sm">
+                  style={{
+                    flex: 1, background: "transparent", color: "var(--text)",
+                    border: "1px solid var(--border)", padding: "10px",
+                    borderRadius: "var(--radius-md)", fontSize: 13, cursor: "pointer",
+                  }}
+                >
                   Cancel
                 </button>
               </div>
@@ -181,45 +259,98 @@ export default function ChannelsPage() {
         </div>
       )}
 
+      {/* Content */}
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
+          <div style={{
+            width: 32, height: 32, border: "2px solid var(--primary)",
+            borderTopColor: "transparent", borderRadius: "50%",
+            animation: "spin 0.8s linear infinite",
+          }} />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-gray-500">
-          <Tv size={48} className="mx-auto mb-4 opacity-40" />
+        <div style={{ textAlign: "center", padding: "64px 0", color: "var(--text-3)" }}>
+          <Tv size={48} style={{ margin: "0 auto 16px", opacity: 0.4 }} />
           <p>No channels yet.</p>
         </div>
       ) : (
-        <div className="grid gap-3">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {filtered.map(ch => (
-            <div key={ch.id}
-              className="flex items-center gap-4 bg-white dark:bg-surface rounded-xl p-4 border border-gray-200 dark:border-gray-800">
-              <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
-                {ch.type === "tv" ? <Tv size={20} className="text-gray-500" /> : <Radio size={20} className="text-gray-500" />}
+            <div
+              key={ch.id}
+              style={{
+                display: "flex", alignItems: "center", gap: 16,
+                padding: 16, borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--border)", background: "var(--bg-surface)",
+              }}
+            >
+              <div style={{
+                width: 40, height: 40, borderRadius: "var(--radius-md)",
+                background: "var(--bg)", display: "flex", alignItems: "center",
+                justifyContent: "center", flexShrink: 0,
+              }}>
+                {ch.type === "tv" ? <Tv size={20} style={{ color: "var(--text-3)" }} /> : <Radio size={20} style={{ color: "var(--text-3)" }} />}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-sm">{ch.name}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded uppercase font-medium ${ch.type === 'tv' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text)" }}>{ch.name}</span>
+                  <span style={{
+                    fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 600,
+                    background: ch.type === 'tv' ? "rgba(59,130,246,0.1)" : "rgba(16,185,129,0.1)",
+                    color: ch.type === 'tv' ? "#3B82F6" : "#10B981",
+                  }}>
                     {ch.type}
                   </span>
-                  {ch.is_premium && <span className="bg-primary text-white text-xs px-2 py-0.5 rounded">PRO</span>}
+                  {ch.is_premium && (
+                    <span style={{
+                      background: "var(--primary)", color: "white",
+                      fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 600,
+                    }}>PRO</span>
+                  )}
                 </div>
-                <p className="text-xs text-gray-500 truncate mt-0.5">{ch.stream_url}</p>
+                <p style={{ fontSize: 11, color: "var(--text-3)", margin: "4px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {ch.stream_url}
+                </p>
               </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
+              <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                 {ch.is_active
-                  ? <CheckCircle size={16} className="text-green-500" />
-                  : <XCircle size={16} className="text-gray-400" />}
+                  ? <CheckCircle size={16} style={{ color: "#10B981" }} />
+                  : <XCircle size={16} style={{ color: "var(--text-3)" }} />}
                 <button
                   onClick={() => toggleMutation.mutate({ id: ch.id, isPremium: !ch.is_premium })}
-                  className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  title={ch.is_premium ? "Set Free" : "Set Premium"}>
+                  style={{
+                    padding: 8, background: "transparent", border: "none",
+                    borderRadius: "var(--radius-md)", cursor: "pointer",
+                    color: "var(--text-3)", display: "flex",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "var(--bg)";
+                    e.currentTarget.style.color = "var(--primary)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "var(--text-3)";
+                  }}
+                  title={ch.is_premium ? "Set Free" : "Set Premium"}
+                >
                   {ch.is_premium ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
-                <button onClick={() => startEdit(ch)}
-                  className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <button
+                  onClick={() => startEdit(ch)}
+                  style={{
+                    padding: 8, background: "transparent", border: "none",
+                    borderRadius: "var(--radius-md)", cursor: "pointer",
+                    color: "var(--text-3)", display: "flex",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "var(--bg)";
+                    e.currentTarget.style.color = "var(--primary)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "var(--text-3)";
+                  }}
+                >
                   <Edit size={16} />
                 </button>
               </div>

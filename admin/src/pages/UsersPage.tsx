@@ -36,78 +36,139 @@ export default function UsersPage() {
   );
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-semibold mb-6">User Management</h1>
+    <div style={{ padding: "32px 32px 48px" }}>
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <h1 className="page-title" style={{ marginBottom: 4 }}>User Management</h1>
+        <p style={{ fontSize: 13, color: "var(--text-3)", margin: 0 }}>
+          Manage user accounts and permissions
+        </p>
+      </div>
 
-      <div className="relative mb-6">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      {/* Search bar */}
+      <div style={{ position: "relative", marginBottom: 24 }}>
+        <Search size={16} style={{
+          position: "absolute", left: 12, top: "50%",
+          transform: "translateY(-50%)", color: "var(--text-3)",
+        }} />
         <input
           type="text"
           placeholder="Search by name or email..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-background text-sm"
+          style={{
+            width: "100%", padding: "10px 12px 10px 36px",
+            borderRadius: "var(--radius-md)", border: "1px solid var(--border)",
+            background: "var(--bg)", color: "var(--text)", fontSize: 13,
+          }}
         />
       </div>
 
+      {/* Users table */}
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
+          <div style={{
+            width: 32, height: 32, border: "2px solid var(--primary)",
+            borderTopColor: "transparent", borderRadius: "50%",
+            animation: "spin 0.8s linear infinite",
+          }} />
         </div>
       ) : (
-        <div className="bg-white dark:bg-surface rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-800/50">
+        <div style={{
+          background: "var(--bg-surface)", borderRadius: "var(--radius-lg)",
+          border: "1px solid var(--border)", overflow: "auto",
+        }}>
+          <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
+            <thead style={{ background: "var(--bg)", borderBottom: "1px solid var(--border)" }}>
               <tr>
                 {["Name", "Email", "Role", "Status", "Joined", "Actions"].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <th key={h} style={{
+                    textAlign: "left", padding: "12px 16px",
+                    fontSize: 11, fontWeight: 700, color: "var(--text-3)",
+                    textTransform: "uppercase", letterSpacing: "0.05em",
+                  }}>
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            <tbody style={{ borderTop: "1px solid var(--border)" }}>
               {filtered.map(user => (
-                <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs flex-shrink-0">
+                <tr key={user.id} style={{
+                  borderBottom: "1px solid var(--border)",
+                  transition: "background 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "var(--bg)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                }}>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: "50%",
+                        background: "var(--primary-soft)", display: "flex",
+                        alignItems: "center", justifyContent: "center",
+                        color: "var(--primary)", fontWeight: 700, fontSize: 12,
+                        flexShrink: 0,
+                      }}>
                         {user.full_name.charAt(0).toUpperCase()}
                       </div>
-                      <span className="font-medium">{user.full_name}</span>
+                      <span style={{ fontWeight: 500, color: "var(--text)" }}>
+                        {user.full_name}
+                      </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{user.email}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                      user.role === "admin"
-                        ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                        : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                    }`}>
+                  <td style={{ padding: "12px 16px", color: "var(--text-2)" }}>
+                    {user.email}
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                      padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600,
+                      background: user.role === "admin"
+                        ? "rgba(139, 92, 246, 0.1)"
+                        : "var(--bg)",
+                      color: user.role === "admin" ? "#8B5CF6" : "var(--text-2)",
+                      border: user.role !== "admin" ? "1px solid var(--border)" : "none",
+                    }}>
                       {user.role === "admin" && <Shield size={10} />}
                       {user.role}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                      user.is_active
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                    }`}>
+                  <td style={{ padding: "12px 16px" }}>
+                    <span style={{
+                      padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600,
+                      background: user.is_active
+                        ? "rgba(16, 185, 129, 0.1)"
+                        : "rgba(239, 68, 68, 0.1)",
+                      color: user.is_active ? "#10B981" : "#DC2626",
+                    }}>
                       {user.is_active ? "Active" : "Suspended"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">
+                  <td style={{ padding: "12px 16px", color: "var(--text-3)", fontSize: 12 }}>
                     {new Date(user.created_at).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-3">
+                  <td style={{ padding: "12px 16px" }}>
                     <button
                       onClick={() => toggleMutation.mutate({ id: user.id, isActive: !user.is_active })}
-                      className={`p-1.5 rounded transition-colors ${
-                        user.is_active
-                          ? "text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                          : "text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20"
-                      }`}
+                      style={{
+                        padding: 6, borderRadius: "var(--radius-md)",
+                        border: "none", cursor: "pointer", display: "flex",
+                        background: "transparent",
+                        color: user.is_active ? "#DC2626" : "#10B981",
+                        transition: "all 0.2s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = user.is_active
+                          ? "rgba(220, 38, 38, 0.1)"
+                          : "rgba(16, 185, 129, 0.1)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                      }}
                       title={user.is_active ? "Suspend" : "Activate"}
                     >
                       {user.is_active ? <UserX size={16} /> : <UserCheck size={16} />}
@@ -117,8 +178,14 @@ export default function UsersPage() {
               ))}
             </tbody>
           </table>
+          
           {filtered.length === 0 && (
-            <div className="text-center py-12 text-gray-500 text-sm">No users found</div>
+            <div style={{
+              textAlign: "center", padding: "48px 0",
+              color: "var(--text-3)", fontSize: 13,
+            }}>
+              No users found
+            </div>
           )}
         </div>
       )}
