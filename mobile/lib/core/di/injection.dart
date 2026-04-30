@@ -9,6 +9,7 @@ import 'package:openair/features/tv/repository/channel_repository.dart';
 import 'package:openair/features/radio/bloc/radio_bloc.dart';
 import 'package:openair/features/vod/bloc/vod_bloc.dart';
 import 'package:openair/features/vod/repository/vod_repository.dart';
+import 'package:openair/features/schedule/repository/schedule_repository.dart';
 
 final getIt = GetIt.instance;
 
@@ -20,6 +21,7 @@ Future<void> configureDependencies() async {
   getIt.registerLazySingleton<ChannelRepository>(() => ChannelRepository(getIt<ApiService>()));
   getIt.registerLazySingleton<VodRepository>(() => VodRepository(getIt<ApiService>()));
   getIt.registerLazySingleton<PodcastRepository>(() => PodcastRepository(getIt<ApiService>()));
+  getIt.registerLazySingleton<ScheduleRepository>(() => ScheduleRepository(getIt<ApiService>()));
   
   getIt.registerFactory<AuthBloc>(() => AuthBloc(getIt<AuthRepository>()));
   getIt.registerFactory<RadioBloc>(() => RadioBloc(getIt<ChannelRepository>()));
