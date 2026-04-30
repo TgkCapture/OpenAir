@@ -38,8 +38,11 @@ dependencies:
   # DI
   get_it: ^7.7.0
 
-
+  # Utilities
   network_info_plus: ^6.0.0
+
+  # Notifications
+  flutter_local_notifications: ^18.0.0
 
 dev_dependencies:
   flutter_test:
