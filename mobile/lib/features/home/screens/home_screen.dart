@@ -215,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               Icon(Icons.live_tv,
                                   size: 80,
-                                  color: theme.colorScheme.primary.withOpacity(0.4)),
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.4)),
                               const SizedBox(height: 16),
                               const Text('No content available yet',
                                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -280,7 +280,7 @@ class _LiveChannelChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.cardTheme.color,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: theme.dividerColor.withOpacity(0.3)),
+          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
         ),
         child: Stack(
           children: [
@@ -362,7 +362,7 @@ class _RadioChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.3)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -419,7 +419,7 @@ class _VodCard extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       child: const Icon(Icons.play_circle_outline,
                           color: Colors.white, size: 36),
                     ),

@@ -115,7 +115,7 @@ class _ChannelCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.cardTheme.color,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: theme.dividerColor.withOpacity(0.3)),
+          border: Border.all(color: theme.dividerColor.withValues(alpha:0.3)),
         ),
         child: Stack(
           children: [

@@ -192,7 +192,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                       children: [
                         Icon(Icons.event_busy,
                             size: 48,
-                            color: theme.colorScheme.onSurface.withOpacity(0.3)),
+                            color: theme.colorScheme.onSurface.withValues(alpha:0.3)),
                         const SizedBox(height: 12),
                         const Text('No programmes scheduled',
                             style: TextStyle(color: Colors.grey)),
@@ -229,13 +229,13 @@ class _ProgrammeTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: isLive
-            ? theme.colorScheme.primary.withOpacity(0.08)
+            ? theme.colorScheme.primary.withValues(alpha:0.08)
             : theme.cardTheme.color,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isLive
-              ? theme.colorScheme.primary.withOpacity(0.3)
-              : theme.dividerColor.withOpacity(0.3),
+              ? theme.colorScheme.primary.withValues(alpha:0.3)
+              : theme.dividerColor.withValues(alpha:0.3),
         ),
       ),
       child: Padding(
@@ -265,7 +265,7 @@ class _ProgrammeTile extends StatelessWidget {
                         value: programme.progress,
                         minHeight: 3,
                         backgroundColor:
-                            theme.colorScheme.primary.withOpacity(0.2),
+                            theme.colorScheme.primary.withValues(alpha:0.2),
                         valueColor: AlwaysStoppedAnimation<Color>(
                             theme.colorScheme.primary),
                       ),
