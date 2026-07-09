@@ -191,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             padding: const EdgeInsets.only(bottom: 24),
                             children: [
                               if (_tvChannels.isNotEmpty) ...[
-                                _SectionHeader(title: 'Live TV', icon: Icons.tv_rounded),
+                                const _SectionHeader(title: 'Live TV', icon: Icons.tv_rounded),
                                 SizedBox(
                                   height: 120,
                                   child: ListView.separated(
@@ -208,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(height: 24),
                               ],
                               if (_radioChannels.isNotEmpty) ...[
-                                _SectionHeader(title: 'Live Radio', icon: Icons.radio_rounded),
+                                const _SectionHeader(title: 'Live Radio', icon: Icons.radio_rounded),
                                 SizedBox(
                                   height: 72,
                                   child: ListView.separated(
@@ -226,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(height: 24),
                               ],
                               if (_featuredVod.isNotEmpty) ...[
-                                _SectionHeader(title: 'Featured Videos', icon: Icons.video_library_rounded),
+                                const _SectionHeader(title: 'Featured Videos', icon: Icons.video_library_rounded),
                                 SizedBox(
                                   height: 200,
                                   child: ListView.separated(

@@ -11,11 +11,11 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      colorScheme: ColorScheme.dark(
+      colorScheme: const ColorScheme.dark(
         primary: primary,
         secondary: primary,
         surface: _darkSurface,
-        onSurface: const Color(0xFFEEEEF0),
+        onSurface: Color(0xFFEEEEF0),
       ),
       scaffoldBackgroundColor: _darkBg,
       fontFamily: 'Roboto',
@@ -32,14 +32,14 @@ class AppTheme {
         ),
       ),
 
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: _darkSurface,
         selectedItemColor: primary,
-        unselectedItemColor: const Color(0xFF555560),
+        unselectedItemColor: Color(0xFF555560),
         type: BottomNavigationBarType.fixed,
         elevation: 0,
-        selectedLabelStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
-        unselectedLabelStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+        selectedLabelStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+        unselectedLabelStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
         showSelectedLabels: true,
         showUnselectedLabels: true,
       ),
@@ -89,7 +89,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: primary, width: 1.5),
+          borderSide: const BorderSide(color: primary, width: 1.5),
         ),
         hintStyle: const TextStyle(color: Color(0xFF555560), fontSize: 14),
       ),
@@ -116,11 +116,11 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      colorScheme: ColorScheme.light(
+      colorScheme: const ColorScheme.light(
         primary: primary,
         secondary: primary,
         surface: Colors.white,
-        onSurface: const Color(0xFF0D0D0F),
+        onSurface: Color(0xFF0D0D0F),
       ),
       scaffoldBackgroundColor: const Color(0xFFF4F5F7),
       fontFamily: 'Roboto',
@@ -137,14 +137,14 @@ class AppTheme {
         ),
       ),
 
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: Colors.white,
         selectedItemColor: primary,
-        unselectedItemColor: const Color(0xFFAAAAAA),
+        unselectedItemColor: Color(0xFFAAAAAA),
         type: BottomNavigationBarType.fixed,
         elevation: 0,
-        selectedLabelStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
-        unselectedLabelStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+        selectedLabelStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+        unselectedLabelStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
       ),
 
       cardTheme: CardThemeData(
@@ -184,7 +184,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: primary, width: 1.5),
+          borderSide: const BorderSide(color: primary, width: 1.5),
         ),
         hintStyle: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 14),
       ),
