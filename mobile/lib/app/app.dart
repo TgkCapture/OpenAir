@@ -24,9 +24,9 @@ class OpenAirApp extends StatelessWidget {
       child: BlocBuilder<SettingsBloc, SettingsState>(
         builder: (context, state) {
           return MaterialApp.router(
-            title: 'OpenAir',
-            theme: AppTheme.light(),
-            darkTheme: AppTheme.dark(),
+            title: state.brandName,
+            theme: AppTheme.light(brand: state.brandColor),
+            darkTheme: AppTheme.dark(brand: state.brandColor),
             themeMode: state.themeMode,
             routerConfig: AppRouter.router,
             debugShowCheckedModeBanner: false,
