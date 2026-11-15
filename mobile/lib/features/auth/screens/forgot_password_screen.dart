@@ -45,7 +45,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 children: [
                   const Icon(Icons.mark_email_read_outlined, size: 64),
                   const SizedBox(height: 16),
-                  const Text('Check your email', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  Text('Check your email', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 8),
                   const Text('If that email exists, an OTP has been sent.', textAlign: TextAlign.center),
                   const SizedBox(height: 24),
@@ -65,7 +65,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   const SizedBox(height: 24),
                   FilledButton(
                     onPressed: _loading ? null : _submit,
-                    child: _loading ? const CircularProgressIndicator(color: Colors.white) : const Text('Send OTP'),
+                    child: _loading ? CircularProgressIndicator(color: Theme.of(context).colorScheme.onPrimary) : const Text('Send OTP'),
                   ),
                 ],
               ),

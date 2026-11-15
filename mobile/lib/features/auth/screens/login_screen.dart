@@ -39,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
           if (state is AuthSuccess) context.go('/home');
           if (state is AuthFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              SnackBar(content: Text(state.message)),
             );
           }
         },
@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       builder: (context, state) => FilledButton(
                         onPressed: state is AuthLoading ? null : _submit,
                         child: state is AuthLoading
-                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary))
                             : const Text('Sign in'),
                       ),
                     ),
