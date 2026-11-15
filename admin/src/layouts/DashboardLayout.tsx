@@ -1,15 +1,18 @@
+import { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Tv, Film, Mic, Calendar,
-  Users, BarChart2, Settings, LogOut, Bell,
+  Users, BarChart2, Settings, LogOut, Bell, Moon, Sun,
 } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
-import { logout } from "../lib/api";
+import api, { logout } from "../lib/api";
+import { applyBrandColor, getTheme, setTheme, type Theme } from "../lib/theme";
 
 const NAV = [
   { to: "/dashboard",     icon: LayoutDashboard, label: "Dashboard" },
   { to: "/channels",      icon: Tv,              label: "Channels" },
-  { to: "/vod",           icon: Film,            label: "VOD" },
+  { to: "/vod",           icon: Film,            label: "Videos" },
   { to: "/podcasts",      icon: Mic,             label: "Podcasts" },
   { to: "/schedule",      icon: Calendar,        label: "Schedule" },
   { to: "/users",         icon: Users,           label: "Users" },
@@ -18,9 +21,32 @@ const NAV = [
   { to: "/settings",      icon: Settings,        label: "Settings" },
 ];
 
+interface Branding {
+  broadcaster: string;
+  primary_color: string;
+}
+
 export default function DashboardLayout() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const [theme, setThemeState] = useState<Theme>(getTheme);
+
+  // Shares its cache with the Settings page, so saving a new name or colour
+  // there updates the sidebar and the brand colour straight away.
+  const { data: branding } = useQuery({
+    queryKey: ["app-config"],
+    queryFn: async () => (await api.get("/config")).data.data as Branding,
+  });
+
+  useEffect(() => {
+    applyBrandColor(branding?.primary_color);
+  }, [branding?.primary_color]);
+
+  const toggleTheme = () => {
+    const next: Theme = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    setThemeState(next);
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -28,115 +54,52 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: "var(--bg)" }}>
-
-      {/* ── Sidebar ── */}
-      <aside style={{
-        width: "var(--sidebar-width)",
-        flexShrink: 0,
-        background: "var(--bg-sidebar)",
-        borderRight: "1px solid var(--border)",
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        position: "sticky",
-        top: 0,
-      }}>
-
-        {/* Logo */}
-        <div style={{
-          height: 56,
-          display: "flex",
-          alignItems: "center",
-          padding: "0 16px",
-          borderBottom: "1px solid var(--border)",
-          gap: 10,
-          flexShrink: 0,
-        }}>
-          <img
-            src="/icon.png"
-            alt="OpenAir"
-            style={{ width: 28, height: 28, borderRadius: 6, objectFit: "cover" }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-          <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>
-            OpenAir
-          </span>
-          <span style={{
-            marginLeft: "auto",
-            fontSize: 10,
-            fontWeight: 700,
-            padding: "2px 6px",
-            background: "var(--primary-soft)",
-            color: "var(--primary)",
-            borderRadius: 4,
-            letterSpacing: "0.05em",
-          }}>
-            ADMIN
-          </span>
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <span>{branding?.broadcaster ?? "OpenAir"}</span>
+          <span className="muted">Studio</span>
         </div>
 
-        {/* Nav */}
-        <nav style={{ flex: 1, padding: "8px", overflowY: "auto" }}>
+        <nav className="sidebar-nav" aria-label="Main">
           {NAV.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
               to={to}
-              className={({ isActive }) =>
-                `nav-item${isActive ? " active" : ""}`
-              }
+              className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}
             >
-              <Icon size={15} />
+              <Icon size={17} aria-hidden="true" />
               {label}
             </NavLink>
           ))}
         </nav>
 
-        {/* User footer */}
-        <div style={{
-          padding: "12px",
-          borderTop: "1px solid var(--border)",
-          flexShrink: 0,
-        }}>
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "8px",
-            borderRadius: "var(--radius-sm)",
-            background: "var(--bg)",
-            marginBottom: 4,
-          }}>
-            <div style={{
-              width: 28, height: 28,
-              borderRadius: "50%",
-              background: "var(--primary-soft)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "var(--primary)",
-              fontWeight: 700,
-              fontSize: 12,
-              flexShrink: 0,
-            }}>
+        <div className="sidebar-footer">
+          <div className="sidebar-user">
+            <div className="avatar" aria-hidden="true">
               {user?.full_name?.charAt(0).toUpperCase() ?? "A"}
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {user?.full_name ?? "Admin"}
               </div>
-              <div style={{ fontSize: 11, color: "var(--text-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: 12, color: "var(--text-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {user?.email}
               </div>
             </div>
           </div>
-          <button className="nav-item" onClick={handleLogout} style={{ width: "100%", color: "#E63946" }}>
-            <LogOut size={14} />
+          <button className="nav-item" onClick={toggleTheme}>
+            {theme === "dark" ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
+            {theme === "dark" ? "Light theme" : "Dark theme"}
+          </button>
+          <button className="nav-item danger" onClick={handleLogout}>
+            <LogOut size={17} aria-hidden="true" />
             Sign out
           </button>
         </div>
       </aside>
 
-      {/* ── Main content ── */}
-      <main style={{ flex: 1, overflowY: "auto", minWidth: 0 }}>
+      <main className="app-main">
         <Outlet />
       </main>
     </div>

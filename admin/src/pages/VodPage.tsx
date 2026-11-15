@@ -26,7 +26,6 @@ export default function VodPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/admin/vod/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["vod"] }),
-    onError: () => window.alert("Could not delete the video. Please try again."),
   });
 
   const confirmDelete = (item: VodItem) => {
