@@ -217,8 +217,12 @@ func (s *Server) setupAdminRoutes(admin *gin.RouterGroup) {
 	// Notifications
 	admin.POST("/notify", notifHandler.Send)
 
-	// File upload - Dynamic URL generation for mobile devices
-	admin.POST("/upload", upload.Handler())
+	// File upload
+	admin.POST("/upload", upload.Handler(upload.Config{
+		Dir:           "./uploads",
+		PublicBaseURL: s.cfg.PublicBaseURL,
+		MaxBytes:      s.cfg.UploadMaxMB << 20,
+	}))
 
 	// Schedule management
 	admin.POST("/schedule", scheduleHandler.Create)
