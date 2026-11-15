@@ -5,6 +5,12 @@ abstract class AuthEvent extends Equatable {
   @override List<Object> get props => [];
 }
 
+/// Sent once at app start to pick up the session saved on the device.
+class AuthSessionRestoreRequested extends AuthEvent {}
+
+/// Sent when the server no longer accepts the saved session.
+class AuthSessionExpired extends AuthEvent {}
+
 class AuthLoginRequested extends AuthEvent {
   final String email;
   final String password;

@@ -14,7 +14,10 @@ class OpenAirApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => getIt<SettingsBloc>()..add(SettingsLoaded())),
-        BlocProvider(create: (_) => getIt<AuthBloc>()),
+        BlocProvider(
+          lazy: false,
+          create: (_) => getIt<AuthBloc>()..add(AuthSessionRestoreRequested()),
+        ),
       ],
       child: BlocBuilder<SettingsBloc, SettingsState>(
         builder: (context, state) {

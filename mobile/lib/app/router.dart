@@ -1,5 +1,4 @@
 import 'package:go_router/go_router.dart';
-import 'package:flutter/foundation.dart';
 import 'package:openair/app/shell.dart';
 import 'package:openair/features/auth/screens/forgot_password_screen.dart';
 import 'package:openair/features/auth/screens/login_screen.dart';
@@ -12,10 +11,10 @@ import 'package:openair/features/library/screens/library_screen.dart';
 import 'package:openair/features/profile/screens/profile_screen.dart';
 
 class AppRouter {
-  static const bool _bypassAuth = kDebugMode;
-
+  // The app opens on Home for everyone. Guests can browse and play free
+  // content; signing in is offered from the Profile tab.
   static final router = GoRouter(
-    initialLocation: _bypassAuth ? '/home' : '/login',
+    initialLocation: '/home',
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),

@@ -34,7 +34,31 @@ class ProfileScreen extends StatelessWidget {
                   ],
                 );
               }
-              return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('You are browsing as a guest',
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Sign in to keep your library and watch history, and to subscribe.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => context.go('/login'),
+                      child: const Text('Sign in'),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      onPressed: () => context.go('/register'),
+                      child: const Text('Create account'),
+                    ),
+                  ],
+                ),
+              );
             },
           ),
           _SettingsTile(
@@ -63,14 +87,21 @@ class ProfileScreen extends StatelessWidget {
             title: 'Watch history',
             onTap: () {},
           ),
-          const Divider(),
-          _SettingsTile(
-            icon: Icons.logout,
-            title: 'Sign out',
-            color: Colors.red,
-            onTap: () {
-              context.read<AuthBloc>().add(AuthLogoutRequested());
-              context.go('/login');
+          BlocBuilder<AuthBloc, AuthState>(
+            builder: (context, state) {
+              if (state is! AuthSuccess) return const SizedBox.shrink();
+              return Column(
+                children: [
+                  const Divider(),
+                  _SettingsTile(
+                    icon: Icons.logout,
+                    title: 'Sign out',
+                    color: Colors.red,
+                    onTap: () =>
+                        context.read<AuthBloc>().add(AuthLogoutRequested()),
+                  ),
+                ],
+              );
             },
           ),
         ],

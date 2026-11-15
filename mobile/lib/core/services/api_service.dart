@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -7,32 +8,92 @@ class ApiService {
   static const _storage = FlutterSecureStorage();
   static const int _port = 8000;
 
+  static const _accessKey = 'access_token';
+  static const _refreshKey = 'refresh_token';
+  static const _userKey = 'user';
+  static const _retriedFlag = 'retried_after_refresh';
+
   late final Dio _dio;
+
+  /// Bare client used only to call `/auth/refresh`, so a failed refresh can
+  /// never trigger another refresh.
+  late final Dio _refreshDio;
   late final String baseUrl;
 
+  final _sessionExpired = StreamController<void>.broadcast();
+  Future<bool>? _refreshing;
+
+  /// Fires when the server rejects the stored refresh token, meaning the user
+  /// has to sign in again.
+  Stream<void> get onSessionExpired => _sessionExpired.stream;
+
   ApiService._internal(this.baseUrl) {
-    _dio = Dio(BaseOptions(
+    final options = BaseOptions(
       baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},
-    ));
+    );
+    _dio = Dio(options);
+    _refreshDio = Dio(options);
 
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final token = await _storage.read(key: 'access_token');
+        final token = await _storage.read(key: _accessKey);
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
         return handler.next(options);
       },
       onError: (error, handler) async {
-        if (error.response?.statusCode == 401) {
-          await _storage.deleteAll();
+        final request = error.requestOptions;
+        final canRetry = error.response?.statusCode == 401 &&
+            !request.path.startsWith('/auth/') &&
+            request.extra[_retriedFlag] != true;
+        if (!canRetry || !await _refreshTokens()) {
+          return handler.next(error);
         }
-        return handler.next(error);
+
+        // The access token was renewed: replay the request once.
+        try {
+          request.extra[_retriedFlag] = true;
+          return handler.resolve(await _dio.fetch(request));
+        } on DioException catch (retryError) {
+          return handler.next(retryError);
+        }
       },
     ));
+  }
+
+  /// Renews the access token. Requests that fail at the same moment share one
+  /// refresh call, because a refresh token only works once.
+  Future<bool> _refreshTokens() {
+    return _refreshing ??= _doRefresh().whenComplete(() => _refreshing = null);
+  }
+
+  Future<bool> _doRefresh() async {
+    final refreshToken = await _storage.read(key: _refreshKey);
+    if (refreshToken == null) return false; // Guest: nothing to renew.
+
+    try {
+      final res = await _refreshDio.post(
+        '/auth/refresh',
+        data: {'refresh_token': refreshToken},
+      );
+      final data = res.data['data'];
+      await saveTokens(data['access_token'], data['refresh_token']);
+      return true;
+    } on DioException catch (e) {
+      // Only a rejected token ends the session. A network failure keeps the
+      // tokens so the next request can try again.
+      if (e.response?.statusCode == 401) {
+        await clearTokens();
+        _sessionExpired.add(null);
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<ApiService> create() async {
@@ -138,16 +199,20 @@ class ApiService {
   Dio get dio => _dio;
 
   Future<void> saveTokens(String accessToken, String refreshToken) async {
-    await _storage.write(key: 'access_token', value: accessToken);
-    await _storage.write(key: 'refresh_token', value: refreshToken);
+    await _storage.write(key: _accessKey, value: accessToken);
+    await _storage.write(key: _refreshKey, value: refreshToken);
   }
 
+  /// Removes the tokens and the cached user.
   Future<void> clearTokens() async {
     await _storage.deleteAll();
   }
 
-  Future<bool> hasToken() async {
-    final token = await _storage.read(key: 'access_token');
-    return token != null;
-  }
+  Future<String?> readRefreshToken() => _storage.read(key: _refreshKey);
+
+  /// The signed-in user is cached so the app can open signed in while offline.
+  Future<void> saveUserJson(String json) =>
+      _storage.write(key: _userKey, value: json);
+
+  Future<String?> readUserJson() => _storage.read(key: _userKey);
 }

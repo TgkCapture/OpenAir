@@ -20,6 +20,14 @@ class AuthUser {
         avatarUrl: json['avatar_url'],
         role: json['role'],
       );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'email': email,
+        'full_name': fullName,
+        'avatar_url': avatarUrl,
+        'role': role,
+      };
 }
 
 class AuthResponse {
