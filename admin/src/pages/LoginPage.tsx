@@ -18,13 +18,13 @@ export default function LoginPage() {
     setError("");
     try {
       const res = await api.post("/auth/login", { email, password });
-      const { user, access_token } = res.data.data;
+      const { user, access_token, refresh_token } = res.data.data;
       if (user.role !== "admin") {
         setError("Access denied. Admin accounts only.");
         setLoading(false);
         return;
       }
-      setAuth(access_token, user);
+      setAuth(access_token, refresh_token, user);
       navigate("/dashboard");
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: { message?: string } } } };

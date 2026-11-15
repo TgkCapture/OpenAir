@@ -1,9 +1,10 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Tv, Film, Mic, Calendar,
-  Users, BarChart2, Settings, LogOut, Radio, Bell,
+  Users, BarChart2, Settings, LogOut, Bell,
 } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
+import { logout } from "../lib/api";
 
 const NAV = [
   { to: "/dashboard",     icon: LayoutDashboard, label: "Dashboard" },
@@ -18,11 +19,11 @@ const NAV = [
 ];
 
 export default function DashboardLayout() {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
 
