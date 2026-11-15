@@ -18,9 +18,22 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) GetByChannel(ctx context.Context, channelID string, date time.Time) ([]*Programme, error) {
-	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
-	end := start.Add(24 * time.Hour)
+// StationLocation returns the timezone configured for the station. It falls
+// back to UTC when none is set or the stored name is not recognised.
+func (r *Repository) StationLocation(ctx context.Context) *time.Location {
+	var name string
+	if err := r.db.QueryRow(ctx, `SELECT timezone FROM app_config LIMIT 1`).Scan(&name); err != nil {
+		return time.UTC
+	}
+	loc, err := time.LoadLocation(name)
+	if err != nil {
+		return time.UTC
+	}
+	return loc
+}
+
+// GetByChannel lists a channel's programmes that start in [start, end).
+func (r *Repository) GetByChannel(ctx context.Context, channelID string, start, end time.Time) ([]*Programme, error) {
 
 	rows, err := r.db.Query(ctx, `
 		SELECT p.id, p.channel_id, c.name, p.title, p.description,

@@ -18,12 +18,15 @@ interface Programme {
   ends_at: string;
 }
 
+// Formats a date as YYYY-MM-DD in the browser's own timezone. toISOString()
+// would give the UTC date, which is the wrong day near midnight.
+const localDate = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
 export default function SchedulePage() {
   const qc = useQueryClient();
   const [pickedChannel, setSelectedChannel] = useState<string>("");
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [selectedDate, setSelectedDate] = useState(localDate(new Date()));
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     channel_id: "",

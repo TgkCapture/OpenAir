@@ -267,15 +267,16 @@ func (s *Server) getAppConfig(c *gin.Context) {
 		EnableVod      bool    `json:"enable_vod"`
 		EnablePodcasts bool    `json:"enable_podcasts"`
 		EnableRadio    bool    `json:"enable_radio"`
+		Timezone       string  `json:"timezone"`
 	}
 
 	var cfg Config
 	err := s.db.QueryRow(c.Request.Context(), `
 		SELECT broadcaster, primary_color, logo_url,
-			enable_vod, enable_podcasts, enable_radio
+			enable_vod, enable_podcasts, enable_radio, timezone
 		FROM app_config LIMIT 1`).Scan(
 		&cfg.Broadcaster, &cfg.PrimaryColor, &cfg.LogoURL,
-		&cfg.EnableVod, &cfg.EnablePodcasts, &cfg.EnableRadio,
+		&cfg.EnableVod, &cfg.EnablePodcasts, &cfg.EnableRadio, &cfg.Timezone,
 	)
 
 	if err != nil {
@@ -295,6 +296,7 @@ func (s *Server) updateAppConfig(c *gin.Context) {
 		EnableVod      bool    `json:"enable_vod"`
 		EnablePodcasts bool    `json:"enable_podcasts"`
 		EnableRadio    bool    `json:"enable_radio"`
+		Timezone       string  `json:"timezone"`
 	}
 
 	var cfg Config
@@ -303,18 +305,28 @@ func (s *Server) updateAppConfig(c *gin.Context) {
 		return
 	}
 
-	_, err := s.db.Exec(c.Request.Context(), `
-		UPDATE app_config SET 
-			broadcaster=$1, 
-			primary_color=$2, 
+	// An empty timezone leaves the stored one unchanged.
+	if cfg.Timezone != "" {
+		if _, err := time.LoadLocation(cfg.Timezone); err != nil {
+			utils.BadRequest(c, "VALIDATION_ERROR", "unknown timezone; use a name such as Africa/Blantyre")
+			return
+		}
+	}
+
+	err := s.db.QueryRow(c.Request.Context(), `
+		UPDATE app_config SET
+			broadcaster=$1,
+			primary_color=$2,
 			logo_url=$3,
-			enable_vod=$4, 
-			enable_podcasts=$5, 
-			enable_radio=$6, 
-			updated_at=NOW()`,
+			enable_vod=$4,
+			enable_podcasts=$5,
+			enable_radio=$6,
+			timezone=COALESCE(NULLIF($7, ''), timezone),
+			updated_at=NOW()
+		RETURNING timezone`,
 		cfg.Broadcaster, cfg.PrimaryColor, cfg.LogoURL,
-		cfg.EnableVod, cfg.EnablePodcasts, cfg.EnableRadio,
-	)
+		cfg.EnableVod, cfg.EnablePodcasts, cfg.EnableRadio, cfg.Timezone,
+	).Scan(&cfg.Timezone)
 
 	if err != nil {
 		utils.InternalError(c)

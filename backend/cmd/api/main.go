@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	_ "time/tzdata" // embed timezone data so station timezones work in minimal images
 
 	"github.com/TgkCapture/openair/internal/server"
 	"github.com/TgkCapture/openair/pkg/cache"
