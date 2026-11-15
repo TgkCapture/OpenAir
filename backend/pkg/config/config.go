@@ -4,6 +4,7 @@ import (
     "log"
     "os"
     "strconv"
+    "strings"
 
     "github.com/joho/godotenv"
 )
@@ -12,6 +13,7 @@ type Config struct {
     AppPort  string
     AppEnv   string
     PublicBaseURL string
+    CORSAllowedOrigins []string
     UploadMaxMB   int64
     DBHost   string
     DBPort   string
@@ -48,10 +50,13 @@ func Load() *Config {
         log.Println("no .env file found, reading from environment")
     }
 
+    appEnv := getEnv("APP_ENV", "development")
+
     return &Config{
         AppPort:  getEnv("APP_PORT", "8000"),
         AppEnv:   getEnv("APP_ENV", "development"),
         PublicBaseURL: getEnv("PUBLIC_BASE_URL", ""),
+        CORSAllowedOrigins: corsOrigins(os.Getenv("CORS_ALLOWED_ORIGINS"), appEnv),
         UploadMaxMB:   getEnvInt64("UPLOAD_MAX_MB", 2048),
         DBHost:   getEnv("DB_HOST", "localhost"),
         DBPort:   getEnv("DB_PORT", "5433"),
@@ -91,6 +96,23 @@ func getEnvInt64(key string, fallback int64) int64 {
         return fallback
     }
     return v
+}
+
+// corsOrigins parses a comma-separated list of browser origins allowed to call
+// the API. With nothing configured, development allows any origin and every
+// other environment allows none, so a production deploy has to name its admin
+// dashboard's origin.
+func corsOrigins(value, appEnv string) []string {
+    var origins []string
+    for _, origin := range strings.Split(value, ",") {
+        if origin = strings.TrimRight(strings.TrimSpace(origin), "/"); origin != "" {
+            origins = append(origins, origin)
+        }
+    }
+    if len(origins) == 0 && appEnv == "development" {
+        return []string{"*"}
+    }
+    return origins
 }
 
 func getEnv(key, fallback string) string {
