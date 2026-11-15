@@ -133,6 +133,9 @@ func (s *Server) setupPublicRoutes(v1 *gin.RouterGroup) {
 	v1.GET("/podcasts", podcastHandler.GetAll)
 	v1.GET("/podcasts/:id", podcastHandler.GetByID)
 	v1.GET("/podcasts/:id/episodes", podcastHandler.GetEpisodes)
+	// Guests can play free episodes; premium episodes need a signed-in subscriber.
+	v1.GET("/podcasts/:id/episodes/:episodeId/stream",
+		middleware.OptionalAuth(s.tokenManager), podcastHandler.GetEpisodeStreamURL)
 
 	// App configuration endpoint
 	v1.GET("/config", s.getAppConfig)
@@ -172,13 +175,6 @@ func (s *Server) setupProtectedRoutes(protected *gin.RouterGroup) {
 	protected.GET("/vod/:id/stream/secure", contentHandler.GetStreamURL)
 	protected.POST("/watch-history", contentHandler.SaveWatchHistory)
 	protected.GET("/watch-history", contentHandler.GetWatchHistory)
-
-	// Podcasts
-	podcastRepo := podcasts.NewRepository(s.db)
-	podcastSvc := podcasts.NewService(podcastRepo)
-	podcastHandler := podcasts.NewHandler(podcastSvc)
-
-	protected.GET("/podcasts/:id/episodes/:episodeId/stream", podcastHandler.GetEpisodeStreamURL)
 }
 
 // setupAdminRoutes configures administrator-only endpoints
