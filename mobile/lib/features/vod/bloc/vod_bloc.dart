@@ -47,10 +47,12 @@ class VodBloc extends Bloc<VodEvent, VodState> {
 
   Future<void> _onSearch(VodSearched event, Emitter<VodState> emit) async {
     if (state is! VodSuccess) return;
-    final current = state as VodSuccess;
     try {
       final items = await _repo.getVod(search: event.query);
-      emit(current.copyWith(items: items));
+      // Copy from the state as it is now, not as it was before the request,
+      // so a play request made in the meantime is not overwritten.
+      final latest = state;
+      if (latest is VodSuccess) emit(latest.copyWith(items: items));
     } catch (e) {
       emit(VodError(e.toString()));
     }
@@ -58,10 +60,15 @@ class VodBloc extends Bloc<VodEvent, VodState> {
 
   Future<void> _onStream(VodStreamRequested event, Emitter<VodState> emit) async {
     if (state is! VodSuccess) return;
-    final current = state as VodSuccess;
     try {
       final url = await _repo.getStreamUrl(event.itemId);
-      emit(current.copyWith(streamUrl: url, streamTitle: event.title));
+      final latest = state;
+      if (latest is! VodSuccess) return;
+      emit(latest.copyWith(
+        streamUrl: url,
+        streamTitle: event.title,
+        playRequest: latest.playRequest + 1,
+      ));
     } catch (e) {
       emit(VodError(e.toString()));
     }

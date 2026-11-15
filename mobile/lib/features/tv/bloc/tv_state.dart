@@ -10,15 +10,24 @@ class TvLoading extends TvState {}
 
 class TvChannelsSuccess extends TvState {
   final List<Channel> channels;
-  const TvChannelsSuccess(this.channels);
-  @override List<Object?> get props => [channels];
-}
 
-class TvStreamReady extends TvState {
-  final String streamUrl;
-  final String channelName;
-  const TvStreamReady(this.streamUrl, this.channelName);
-  @override List<Object?> get props => [streamUrl, channelName];
+  /// The stream to open, set by the latest play request.
+  final String? streamUrl;
+  final String? streamTitle;
+
+  /// Goes up by one each time the user asks to play a channel. The screen
+  /// opens the player when this changes, so the channel list stays in the
+  /// state and the same channel can be played again.
+  final int playRequest;
+
+  const TvChannelsSuccess(
+    this.channels, {
+    this.streamUrl,
+    this.streamTitle,
+    this.playRequest = 0,
+  });
+
+  @override List<Object?> get props => [channels, playRequest];
 }
 
 class TvError extends TvState {
