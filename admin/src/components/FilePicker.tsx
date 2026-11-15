@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
-import { Upload, X, Loader } from "lucide-react";
+import { useId, useRef, useState } from "react";
+import { Upload, X } from "lucide-react";
 import { uploadFile } from "../lib/upload";
+import { errorMessage } from "../lib/toast";
 
 interface FilePickerProps {
   label: string;
@@ -10,10 +11,12 @@ interface FilePickerProps {
   placeholder?: string;
 }
 
+/** A field that takes a file by URL, by upload, or by drag and drop. */
 export default function FilePicker({
-  label, value, onChange, accept = "*/*", placeholder = "Paste URL or upload file",
+  label, value, onChange, accept = "*/*", placeholder = "Paste a URL or upload a file",
 }: FilePickerProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputId = useId();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
@@ -23,10 +26,10 @@ export default function FilePicker({
     setError("");
     setProgress(0);
     try {
-      const url = await uploadFile(file, setProgress);
-      onChange(url);
-    } catch {
-      setError("Upload failed — try pasting a URL instead");
+      onChange(await uploadFile(file, setProgress));
+    } catch (err) {
+      // The server says why: too large, wrong type, and so on.
+      setError(errorMessage(err));
     } finally {
       setUploading(false);
       setProgress(0);
@@ -36,16 +39,18 @@ export default function FilePicker({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+    if (file && !uploading) handleFile(file);
   };
+
+  const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(value);
 
   return (
     <div className="form-group">
-      <label className="label">{label}</label>
+      <label className="label" htmlFor={inputId}>{label}</label>
 
-      {/* URL input */}
       <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
         <input
+          id={inputId}
           type="url"
           className="input"
           value={value}
@@ -54,70 +59,84 @@ export default function FilePicker({
           style={{ flex: 1 }}
         />
         {value && (
-          <button type="button" onClick={() => onChange("")}
-            style={{ padding: "0 10px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", cursor: "pointer", color: "var(--text-3)" }}>
-            <X size={14} />
+          <button type="button" className="icon-btn" aria-label={`Clear ${label}`} onClick={() => onChange("")}>
+            <X size={16} aria-hidden="true" />
           </button>
         )}
       </div>
 
-      {/* Drop zone */}
-      <div
+      <button
+        type="button"
+        disabled={uploading}
         onDrop={handleDrop}
         onDragOver={e => e.preventDefault()}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => fileRef.current?.click()}
         style={{
+          width: "100%",
+          minHeight: 44,
           border: "1px dashed var(--border-strong)",
           borderRadius: "var(--radius-sm)",
-          padding: "12px",
-          cursor: "pointer",
-          textAlign: "center",
-          background: "var(--bg)",
-          transition: "border-color 0.15s",
+          padding: "10px 12px",
+          cursor: uploading ? "default" : "pointer",
+          background: "var(--bg-surface)",
+          color: "var(--text-2)",
+          fontFamily: "var(--font)",
+          fontSize: 13,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
         }}
-        onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--primary)")}
-        onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border-strong)")}
       >
         {uploading ? (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: "var(--text-3)", fontSize: 13 }}>
-            <Loader size={14} className="spinner" style={{ borderColor: "var(--border)", borderTopColor: "var(--primary)" }} />
-            Uploading... {progress}%
-          </div>
+          <>
+            <span className="spinner" style={{ width: 16, height: 16 }} />
+            Uploading… {progress}%
+          </>
         ) : (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, color: "var(--text-3)", fontSize: 12 }}>
-            <Upload size={13} />
-            Click or drag & drop to upload
-          </div>
+          <>
+            <Upload size={15} aria-hidden="true" />
+            Choose a file, or drag one here
+          </>
         )}
-      </div>
+      </button>
 
-      {/* Progress bar */}
       {uploading && (
-        <div style={{ height: 3, background: "var(--border)", borderRadius: 2, marginTop: 6 }}>
+        <div
+          role="progressbar"
+          aria-label={`Uploading ${label}`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress}
+          style={{ height: 4, background: "var(--border)", borderRadius: 2, marginTop: 8 }}
+        >
           <div style={{ height: "100%", background: "var(--primary)", borderRadius: 2, width: `${progress}%`, transition: "width 0.2s" }} />
         </div>
       )}
 
-      {/* Preview */}
       {value && !uploading && (
         <div style={{ marginTop: 8 }}>
-          {/\.(jpg|jpeg|png|gif|webp)$/i.test(value) || value.startsWith("blob:") ? (
-            <img src={value} alt="preview"
-              style={{ height: 64, borderRadius: 6, objectFit: "cover", border: "1px solid var(--border)" }}
+          {isImage ? (
+            <img src={value} alt=""
+              style={{ height: 64, borderRadius: 8, objectFit: "cover", border: "1px solid var(--border)" }}
               onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
           ) : (
             <a href={value} target="_blank" rel="noreferrer"
-              style={{ fontSize: 11, color: "var(--primary)", wordBreak: "break-all" }}>
+              style={{ fontSize: 12, color: "var(--text-2)", wordBreak: "break-all" }}>
               {value}
             </a>
           )}
         </div>
       )}
 
-      {error && <p style={{ color: "#DC2626", fontSize: 12, margin: "6px 0 0" }}>{error}</p>}
+      {error && <p role="alert" style={{ color: "var(--danger)", fontSize: 13, margin: "8px 0 0" }}>{error}</p>}
 
-      <input ref={inputRef} type="file" accept={accept} style={{ display: "none" }}
-        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+      <input ref={fileRef} type="file" accept={accept} style={{ display: "none" }}
+        onChange={e => {
+          const f = e.target.files?.[0];
+          if (f) handleFile(f);
+          e.target.value = ""; // Allow choosing the same file again.
+        }} />
     </div>
   );
 }
