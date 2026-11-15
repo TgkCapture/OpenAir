@@ -3,9 +3,12 @@ package auth
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"net/smtp"
+	"time"
 
 	"github.com/TgkCapture/openair/pkg/config"
 	"github.com/TgkCapture/openair/pkg/token"
@@ -63,31 +66,38 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*AuthResponse, e
 	return s.issueTokens(ctx, user)
 }
 
+// RefreshToken exchanges a valid refresh token for a new access token and a
+// new refresh token. The old refresh token stops working as soon as it is used.
 func (s *Service) RefreshToken(ctx context.Context, req RefreshRequest) (*AuthResponse, error) {
-	claims, err := s.tokens.VerifyAccessToken(req.RefreshToken)
+	userID, err := s.repo.ConsumeRefreshToken(ctx, hashRefreshToken(req.RefreshToken))
 	if err != nil {
+		return nil, err
+	}
+	if userID == "" {
 		return nil, ErrInvalidToken
 	}
 
-	user, err := s.repo.GetUserByID(ctx, claims.UserID)
-	if err != nil || user == nil {
+	user, err := s.repo.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
 		return nil, ErrInvalidToken
 	}
-
-	storedHash, err := s.repo.GetRefreshToken(ctx, user.ID)
-	if err != nil || storedHash == "" {
-		return nil, ErrInvalidToken
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(req.RefreshToken)); err != nil {
-		return nil, ErrInvalidToken
+	if !user.IsActive {
+		return nil, ErrAccountDisabled
 	}
 
 	return s.issueTokens(ctx, user)
 }
 
-func (s *Service) Logout(ctx context.Context, userID string) error {
-	return s.repo.DeleteRefreshToken(ctx, userID)
+// Logout revokes the given refresh token. With no token it signs the user out
+// of every device.
+func (s *Service) Logout(ctx context.Context, userID, refreshToken string) error {
+	if refreshToken == "" {
+		return s.repo.DeleteAllRefreshTokens(ctx, userID)
+	}
+	return s.repo.DeleteRefreshToken(ctx, userID, hashRefreshToken(refreshToken))
 }
 
 func (s *Service) ForgotPassword(ctx context.Context, req ForgotPasswordRequest) error {
@@ -138,6 +148,11 @@ func (s *Service) ResetPassword(ctx context.Context, req ResetPasswordRequest) e
 		return err
 	}
 
+	// A password reset signs the account out everywhere.
+	if err := s.repo.DeleteRefreshTokensByEmail(ctx, req.Email); err != nil {
+		return err
+	}
+
 	return s.repo.DeleteOTP(ctx, req.Email)
 }
 
@@ -163,12 +178,8 @@ func (s *Service) issueTokens(ctx context.Context, user *User) (*AuthResponse, e
 	}
 
 	refreshToken := s.tokens.GenerateRefreshToken()
-	hash, err := bcrypt.GenerateFromPassword([]byte(refreshToken), 10)
-	if err != nil {
-		return nil, fmt.Errorf("hash refresh token: %w", err)
-	}
-
-	if err := s.repo.StoreRefreshToken(ctx, user.ID, string(hash)); err != nil {
+	expiresAt := time.Now().Add(refreshTokenTTL)
+	if err := s.repo.StoreRefreshToken(ctx, user.ID, hashRefreshToken(refreshToken), expiresAt); err != nil {
 		return nil, fmt.Errorf("store refresh token: %w", err)
 	}
 
@@ -177,6 +188,16 @@ func (s *Service) issueTokens(ctx context.Context, user *User) (*AuthResponse, e
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, nil
+}
+
+// refreshTokenTTL is how long a refresh token can be exchanged for new tokens.
+const refreshTokenTTL = 30 * 24 * time.Hour
+
+// hashRefreshToken returns the value stored for a refresh token. The token is
+// long and random, so a plain SHA-256 is enough and lets it be looked up directly.
+func hashRefreshToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }
 
 func generateOTP() (string, error) {

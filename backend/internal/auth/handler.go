@@ -67,15 +67,29 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 
 	resp, err := h.svc.RefreshToken(c.Request.Context(), req)
 	if err != nil {
-		utils.Unauthorized(c, "INVALID_TOKEN", "invalid or expired token")
+		switch {
+		case errors.Is(err, ErrInvalidToken):
+			utils.Unauthorized(c, "INVALID_TOKEN", "invalid or expired token")
+		case errors.Is(err, ErrAccountDisabled):
+			utils.Unauthorized(c, "ACCOUNT_DISABLED", "account is disabled")
+		default:
+			log.Printf("ERROR refresh token: %v", err)
+			utils.InternalError(c)
+		}
 		return
 	}
 	utils.OK(c, resp)
 }
 
 func (h *Handler) Logout(c *gin.Context) {
+	// The body is optional: with a refresh token only that device is signed
+	// out, without one every device is.
+	var req LogoutRequest
+	_ = c.ShouldBindJSON(&req)
+
 	userID := c.GetString("user_id")
-	if err := h.svc.Logout(c.Request.Context(), userID); err != nil {
+	if err := h.svc.Logout(c.Request.Context(), userID, req.RefreshToken); err != nil {
+		log.Printf("ERROR logout: %v", err)
 		utils.InternalError(c)
 		return
 	}
