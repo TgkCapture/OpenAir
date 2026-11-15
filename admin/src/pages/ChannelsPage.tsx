@@ -21,7 +21,7 @@ export default function ChannelsPage() {
 
   const { data: channels = [], isLoading } = useQuery({
     queryKey: ["channels"],
-    queryFn: async () => (await api.get("/channels")).data.data as Channel[],
+    queryFn: async () => (await api.get("/admin/channels")).data.data as Channel[],
   });
 
   const saveMutation = useMutation({

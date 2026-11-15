@@ -41,6 +41,43 @@ func (h *Handler) GetAll(c *gin.Context) {
 	})
 }
 
+// AdminGetAll lists every content item, including unpublished drafts.
+func (h *Handler) AdminGetAll(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "50"))
+
+	result, err := h.svc.GetAllForAdmin(
+		c.Request.Context(),
+		c.Query("type"),
+		c.Query("category"),
+		c.Query("q"),
+		page, perPage,
+	)
+	if err != nil {
+		log.Printf("ERROR AdminGetAll content: %v", err)
+		utils.InternalError(c)
+		return
+	}
+	utils.OKWithMeta(c, result.Items, &utils.Meta{
+		Page:    result.Page,
+		PerPage: result.PerPage,
+		Total:   result.Total,
+	})
+}
+
+func (h *Handler) Delete(c *gin.Context) {
+	if err := h.svc.Delete(c.Request.Context(), c.Param("id")); err != nil {
+		if errors.Is(err, ErrContentNotFound) {
+			utils.NotFound(c, "content not found")
+			return
+		}
+		log.Printf("ERROR Delete content: %v", err)
+		utils.InternalError(c)
+		return
+	}
+	utils.OK(c, gin.H{"message": "content deleted"})
+}
+
 func (h *Handler) GetByID(c *gin.Context) {
 	item, err := h.svc.GetByID(c.Request.Context(), c.Param("id"))
 	if err != nil {

@@ -21,7 +21,12 @@ func NewService(repo *Repository, cfg *config.Config) *Service {
 }
 
 func (s *Service) GetAll(ctx context.Context, channelType string) ([]*Channel, error) {
-	return s.repo.GetAll(ctx, channelType)
+	return s.repo.GetAll(ctx, channelType, false)
+}
+
+// GetAllForAdmin also returns deactivated channels.
+func (s *Service) GetAllForAdmin(ctx context.Context, channelType string) ([]*Channel, error) {
+	return s.repo.GetAll(ctx, channelType, true)
 }
 
 func (s *Service) GetByID(ctx context.Context, id string) (*Channel, error) {

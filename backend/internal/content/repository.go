@@ -18,11 +18,13 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) GetAll(ctx context.Context, contentType, category, search string, page, perPage int) (*ContentListResponse, error) {
+// GetAll lists content. Viewers only see published items; the admin
+// dashboard passes includeUnpublished to see drafts too.
+func (r *Repository) GetAll(ctx context.Context, contentType, category, search string, page, perPage int, includeUnpublished bool) (*ContentListResponse, error) {
 	offset := (page - 1) * perPage
-	conditions := []string{"is_published = true"}
-	args := []interface{}{}
-	argIdx := 1
+	conditions := []string{"(is_published = true OR $1)"}
+	args := []interface{}{includeUnpublished}
+	argIdx := 2
 
 	if contentType != "" {
 		conditions = append(conditions, fmt.Sprintf("type = $%d", argIdx))
@@ -156,6 +158,16 @@ func (r *Repository) Update(ctx context.Context, id string, req UpdateContentReq
 		&c.ViewCount, &c.PublishedAt, &c.CreatedAt)
 
 	return c, err
+}
+
+// Delete removes a content item and reports whether it existed. Watch history
+// for the item is removed with it.
+func (r *Repository) Delete(ctx context.Context, id string) (bool, error) {
+	tag, err := r.db.Exec(ctx, `DELETE FROM content WHERE id=$1`, id)
+	if err != nil {
+		return false, fmt.Errorf("delete content: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
 }
 
 func (r *Repository) ToggleAccess(ctx context.Context, id string, isPremium bool) error {
