@@ -2,6 +2,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openair/core/audio/audio_controller.dart';
 import 'package:openair/features/podcasts/bloc/podcast_bloc.dart';
 import 'package:openair/features/podcasts/models/podcast_model.dart';
 import 'package:openair/features/podcasts/repository/podcast_repository.dart';
@@ -34,26 +35,98 @@ const _episode = Episode(
 void main() {
   group('PodcastBloc', () {
     late _MockAudioPlayer player;
+    late _MockPodcastRepository repo;
+    late AudioController audio;
+    late PodcastBloc bloc;
+
+    setUpAll(() {
+      registerFallbackValue(AudioSource.uri(Uri.parse('https://example.com/a')));
+    });
 
     setUp(() {
       player = _MockAudioPlayer();
+      when(() => player.playerStateStream)
+          .thenAnswer((_) => const Stream<PlayerState>.empty());
       when(() => player.stop()).thenAnswer((_) async {});
+      when(() => player.play()).thenAnswer((_) async {});
       when(() => player.dispose()).thenAnswer((_) async {});
+      when(() => player.setAudioSource(any())).thenAnswer((_) async => null);
+
+      repo = _MockPodcastRepository();
+      when(() => repo.getEpisodes(any())).thenAnswer((_) async => [_episode]);
+      when(() => repo.getEpisodeStreamUrl(any(), any()))
+          .thenAnswer((_) async => 'https://example.com/e1.mp3');
+
+      audio = AudioController(player: player);
+      bloc = PodcastBloc(repo, audio);
     });
 
-    blocTest<PodcastBloc, PodcastState>(
-      'stop clears the now-playing episode',
-      build: () => PodcastBloc(_MockPodcastRepository(), player: player),
-      seed: () => const EpisodeListSuccess(_podcast, [_episode], _episode, true),
-      act: (bloc) => bloc.add(EpisodeStopped()),
-      verify: (bloc) {
-        final state = bloc.state as EpisodeListSuccess;
-        expect(state.nowPlaying, isNull);
-        expect(state.isPlaying, isFalse);
-        expect(state.episodes, [_episode]);
-        verify(() => player.stop()).called(1);
-      },
-    );
+    tearDown(() async {
+      await bloc.close();
+      await audio.close();
+    });
+
+    /// Lets queued bloc events and stream updates run.
+    Future<void> settle() => Future<void>.delayed(Duration.zero);
+
+    Future<EpisodeListSuccess> loadedState() async {
+      bloc.add(const EpisodesLoaded('p1', _podcast));
+      await settle();
+      return bloc.state as EpisodeListSuccess;
+    }
+
+    test('playing an episode goes through the shared player', () async {
+      await loadedState();
+
+      bloc.add(const EpisodePlayRequested(_episode));
+      await settle();
+
+      expect(audio.state!.id, AudioController.episodeId('e1'));
+      expect(audio.state!.subtitle, 'Podcast');
+      expect((bloc.state as EpisodeListSuccess).nowPlaying, _episode);
+    });
+
+    test('stop clears the now-playing episode', () async {
+      await loadedState();
+      bloc.add(const EpisodePlayRequested(_episode));
+      await settle();
+
+      bloc.add(EpisodeStopped());
+      await settle();
+
+      final state = bloc.state as EpisodeListSuccess;
+      expect(state.nowPlaying, isNull);
+      expect(state.isPlaying, isFalse);
+      expect(state.episodes, [_episode]);
+      expect(audio.state, isNull);
+    });
+
+    test('follows the shared player when it is stopped from elsewhere',
+        () async {
+      await loadedState();
+      bloc.add(const EpisodePlayRequested(_episode));
+      await settle();
+
+      // For example from the mini player or the lock screen.
+      await audio.stop();
+      await settle();
+
+      expect((bloc.state as EpisodeListSuccess).nowPlaying, isNull);
+    });
+
+    test('opening a podcast shows an episode that is already playing',
+        () async {
+      await audio.play(
+        id: AudioController.episodeId('e1'),
+        url: 'https://example.com/e1.mp3',
+        title: 'Episode',
+        isLive: false,
+      );
+
+      final state = await loadedState();
+
+      expect(state.nowPlaying, _episode);
+    });
   });
 
   group('VodBloc', () {

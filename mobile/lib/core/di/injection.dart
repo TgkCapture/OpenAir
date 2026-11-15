@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:openair/core/audio/audio_controller.dart';
 import 'package:openair/core/services/api_service.dart';
 import 'package:openair/features/auth/bloc/auth_bloc.dart';
 import 'package:openair/features/auth/repository/auth_repository.dart';
@@ -16,6 +17,8 @@ final getIt = GetIt.instance;
 Future<void> configureDependencies() async {
   final apiService = await ApiService.create();
   getIt.registerSingleton<ApiService>(apiService);
+  // One audio player for the whole app.
+  getIt.registerSingleton<AudioController>(AudioController());
   
   getIt.registerLazySingleton<AuthRepository>(() => AuthRepository(getIt<ApiService>()));
   getIt.registerLazySingleton<ChannelRepository>(() => ChannelRepository(getIt<ApiService>()));
@@ -24,8 +27,8 @@ Future<void> configureDependencies() async {
   getIt.registerLazySingleton<ScheduleRepository>(() => ScheduleRepository(getIt<ApiService>()));
   
   getIt.registerFactory<AuthBloc>(() => AuthBloc(getIt<AuthRepository>()));
-  getIt.registerFactory<RadioBloc>(() => RadioBloc(getIt<ChannelRepository>()));
+  getIt.registerFactory<RadioBloc>(() => RadioBloc(getIt<ChannelRepository>(), getIt<AudioController>()));
   getIt.registerFactory<SettingsBloc>(() => SettingsBloc());
   getIt.registerFactory<VodBloc>(() => VodBloc(getIt<VodRepository>()));
-  getIt.registerFactory<PodcastBloc>(() => PodcastBloc(getIt<PodcastRepository>()));
+  getIt.registerFactory<PodcastBloc>(() => PodcastBloc(getIt<PodcastRepository>(), getIt<AudioController>()));
 }

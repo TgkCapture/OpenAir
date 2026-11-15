@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:openair/core/audio/audio_controller.dart';
 import 'package:openair/core/di/injection.dart';
 import 'package:openair/features/podcasts/bloc/podcast_bloc.dart';
 import 'package:openair/features/podcasts/models/podcast_model.dart';
@@ -35,7 +36,8 @@ class LibraryScreen extends StatelessWidget {
             ),
             // Podcasts tab
             BlocProvider(
-              create: (_) => PodcastBloc(getIt<PodcastRepository>())..add(PodcastsLoaded()),
+              create: (_) => PodcastBloc(getIt<PodcastRepository>(), getIt<AudioController>())
+                ..add(PodcastsLoaded()),
               child: const _PodcastTab(),
             ),
           ],
@@ -401,36 +403,6 @@ class _EpisodeListView extends StatelessWidget {
             ],
           ),
         ),
-
-        // Now playing bar
-        if (state.nowPlaying != null)
-          Container(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha:0.1),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                const Icon(Icons.graphic_eq, color: Colors.red, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(state.nowPlaying!.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                ),
-                IconButton(
-                  icon: Icon(state.isPlaying ? Icons.pause : Icons.play_arrow),
-                  onPressed: () => context.read<PodcastBloc>().add(EpisodePaused()),
-                  iconSize: 22,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.stop),
-                  onPressed: () => context.read<PodcastBloc>().add(EpisodeStopped()),
-                  iconSize: 22,
-                  color: Colors.red,
-                ),
-              ],
-            ),
-          ),
 
         // Episodes list
         Expanded(

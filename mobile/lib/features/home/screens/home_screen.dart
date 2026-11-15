@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import 'package:just_audio/just_audio.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:openair/core/audio/audio_controller.dart';
 import 'package:openair/core/di/injection.dart';
 import 'package:openair/core/services/api_service.dart';
 import 'package:openair/features/tv/models/channel_model.dart';
@@ -20,19 +21,11 @@ class _HomeScreenState extends State<HomeScreen> {
   List<VodItem> _featuredVod = [];
   bool _loading = true;
   String? _error;
-  Channel? _playingRadio;
-  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
     _loadData();
-  }
-
-  @override
-  void dispose() {
-    _audioPlayer.dispose();
-    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -66,8 +59,6 @@ class _HomeScreenState extends State<HomeScreen> {
       final res = await api.dio.get('/channels/${channel.id}/stream');
       final url = res.data['data']['url'] as String;
       if (!mounted) return;
-      await _audioPlayer.stop();
-      setState(() => _playingRadio = null);
       Navigator.push(context, MaterialPageRoute(
         builder: (_) => PlayerScreen(streamUrl: url, title: channel.name),
       ));
@@ -80,19 +71,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _playRadio(Channel channel) async {
     try {
-      if (_playingRadio?.id == channel.id) {
-        await _audioPlayer.stop();
-        setState(() => _playingRadio = null);
+      final audio = getIt<AudioController>();
+      final id = AudioController.radioId(channel.id);
+      // Tapping the channel that is already playing stops it.
+      if (audio.state?.id == id) {
+        await audio.stop();
         return;
       }
       final api = getIt<ApiService>();
       final res = await api.dio.get('/channels/${channel.id}/stream');
       final url = res.data['data']['url'] as String;
-      await _audioPlayer.stop();
-      await _audioPlayer.setUrl(url);
-      await _audioPlayer.play();
-      if (!mounted) return;
-      setState(() => _playingRadio = channel);
+      await audio.play(
+        id: id,
+        url: url,
+        title: channel.name,
+        subtitle: 'Live radio',
+        artUrl: channel.logoUrl,
+        isLive: true,
+      );
     } on DioException catch (e) {
       if (!mounted) return;
       final msg = e.response?.data?['error']?['message'] ?? 'Could not load stream';
@@ -131,6 +127,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    // Rebuild when the shared player changes, to mark the playing channel.
+    final playingId = context.watch<AudioController>().state?.id;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -168,16 +166,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-
-            // ── Now playing bar
-            if (_playingRadio != null)
-              _NowPlayingBar(
-                channel: _playingRadio!,
-                onStop: () async {
-                  await _audioPlayer.stop();
-                  setState(() => _playingRadio = null);
-                },
-              ),
 
             // ── Body
             Expanded(
@@ -218,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     itemCount: _radioChannels.length,
                                     itemBuilder: (_, i) => _RadioChip(
                                       channel: _radioChannels[i],
-                                      isPlaying: _playingRadio?.id == _radioChannels[i].id,
+                                      isPlaying: playingId == AudioController.radioId(_radioChannels[i].id),
                                       onTap: () => _playRadio(_radioChannels[i]),
                                     ),
                                   ),
@@ -540,50 +528,6 @@ class _VodCard extends StatelessWidget {
 }
 
 // ── Now playing bar
-class _NowPlayingBar extends StatelessWidget {
-  final Channel channel;
-  final VoidCallback onStop;
-  const _NowPlayingBar({required this.channel, required this.onStop});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.8)]),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: theme.colorScheme.primary.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.graphic_eq_rounded, color: Colors.white, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('NOW PLAYING', style: TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1)),
-                Text(channel.name, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.stop_circle_outlined, color: Colors.white),
-            onPressed: onStop,
-            iconSize: 22,
-            padding: const EdgeInsets.all(6),
-            constraints: const BoxConstraints(),
-            style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: 0.15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Error view
 class _ErrorView extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;

@@ -14,3 +14,6 @@ class RadioPlayRequested extends RadioEvent {
 }
 
 class RadioStopped extends RadioEvent {}
+
+/// Sent when the shared audio player's state changes.
+class _RadioAudioChanged extends RadioEvent {}
