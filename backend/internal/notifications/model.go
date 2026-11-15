@@ -11,6 +11,17 @@ type RegisterTokenRequest struct {
 	DeviceType string `json:"device_type" binding:"required,oneof=android ios"`
 }
 
+type UnregisterTokenRequest struct {
+	Token string `json:"token" binding:"required"`
+}
+
+// SendResult reports what a send did: how many in-app notifications were
+// stored and how many pushes were delivered.
+type SendResult struct {
+	Saved int `json:"saved"`
+	Sent  int `json:"sent"`
+}
+
 type SendNotificationRequest struct {
 	Title    string   `json:"title" binding:"required"`
 	Body     string   `json:"body" binding:"required"`

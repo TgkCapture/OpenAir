@@ -24,44 +24,58 @@ func (s *Service) RegisterToken(ctx context.Context, userID, token, deviceType s
 	return s.repo.UpsertToken(ctx, userID, token, deviceType)
 }
 
-func (s *Service) Send(ctx context.Context, req SendNotificationRequest) (int, error) {
-	var tokens []string
-	var err error
+func (s *Service) UnregisterToken(ctx context.Context, userID, token string) error {
+	return s.repo.DeleteToken(ctx, userID, token)
+}
+
+// Send stores an in-app notification for every recipient, then pushes to the
+// devices that have registered a token. The in-app copy is stored even for
+// users with no registered device.
+func (s *Service) Send(ctx context.Context, req SendNotificationRequest) (*SendResult, error) {
+	var (
+		saved  int
+		tokens []string
+		err    error
+	)
 
 	if req.SendAll {
+		if saved, err = s.repo.SaveNotificationForAll(ctx, req.Title, req.Body); err != nil {
+			return nil, err
+		}
 		tokens, err = s.repo.GetAllTokens(ctx)
-	} else if len(req.UserIDs) > 0 {
+	} else {
+		if saved, err = s.repo.SaveNotification(ctx, req.UserIDs, req.Title, req.Body); err != nil {
+			return nil, err
+		}
 		tokens, err = s.repo.GetTokensByUserIDs(ctx, req.UserIDs)
 	}
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	if len(tokens) == 0 {
-		return 0, nil
-	}
-
-	// Save in-app notifications
-	if len(req.UserIDs) > 0 {
-		s.repo.SaveNotification(ctx, req.UserIDs, req.Title, req.Body)
-	}
-
-	// Send FCM push
 	sent := 0
 	for _, token := range tokens {
 		if err := s.sendFCM(token, req); err != nil {
-			log.Printf("FCM send error for token %s: %v", token[:8]+"...", err)
+			log.Printf("FCM send error for token %s: %v", shortToken(token), err)
 		} else {
 			sent++
 		}
 	}
 
-	return sent, nil
+	return &SendResult{Saved: saved, Sent: sent}, nil
+}
+
+// shortToken returns a few characters of a device token for logs.
+func shortToken(token string) string {
+	if len(token) <= 8 {
+		return token
+	}
+	return token[:8] + "..."
 }
 
 func (s *Service) sendFCM(token string, req SendNotificationRequest) error {
 	if s.cfg.FCMServerKey == "" {
-		log.Printf("FCM: would send to %s: %s - %s", token[:8]+"...", req.Title, req.Body)
+		log.Printf("FCM: would send to %s: %s - %s", shortToken(token), req.Title, req.Body)
 		return nil
 	}
 
