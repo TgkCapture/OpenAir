@@ -28,7 +28,6 @@ dependencies:
   media_kit_video: ^1.2.4
   media_kit_libs_video: ^1.0.5
   just_audio: ^0.9.39
-  audio_service: ^0.18.13
 
   # UI helpers
   cached_network_image: ^3.3.1
