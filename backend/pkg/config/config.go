@@ -3,6 +3,7 @@ package config
 import (
     "log"
     "os"
+    "strconv"
 
     "github.com/joho/godotenv"
 )
@@ -10,6 +11,8 @@ import (
 type Config struct {
     AppPort  string
     AppEnv   string
+    PublicBaseURL string
+    UploadMaxMB   int64
     DBHost   string
     DBPort   string
     DBUser   string
@@ -48,6 +51,8 @@ func Load() *Config {
     return &Config{
         AppPort:  getEnv("APP_PORT", "8000"),
         AppEnv:   getEnv("APP_ENV", "development"),
+        PublicBaseURL: getEnv("PUBLIC_BASE_URL", ""),
+        UploadMaxMB:   getEnvInt64("UPLOAD_MAX_MB", 2048),
         DBHost:   getEnv("DB_HOST", "localhost"),
         DBPort:   getEnv("DB_PORT", "5433"),
         DBUser:   getEnv("DB_USER", "openair"),
@@ -77,6 +82,15 @@ func Load() *Config {
         MpambaAPIURL: getEnv("MPAMBA_API_URL", ""),
         MpambaAPIKey: getEnv("MPAMBA_API_KEY", ""),
     }
+}
+
+// getEnvInt64 reads a positive whole number, falling back when it is unset or invalid.
+func getEnvInt64(key string, fallback int64) int64 {
+    v, err := strconv.ParseInt(os.Getenv(key), 10, 64)
+    if err != nil || v <= 0 {
+        return fallback
+    }
+    return v
 }
 
 func getEnv(key, fallback string) string {
