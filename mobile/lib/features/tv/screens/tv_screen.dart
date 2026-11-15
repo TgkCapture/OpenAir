@@ -26,12 +26,18 @@ class _TvView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Live TV')),
       body: BlocConsumer<TvBloc, TvState>(
+        // Open the player only when the user has just asked to play a channel.
+        listenWhen: (previous, current) =>
+            current is TvError ||
+            (previous is TvChannelsSuccess &&
+                current is TvChannelsSuccess &&
+                previous.playRequest != current.playRequest),
         listener: (context, state) {
-          if (state is TvStreamReady) {
+          if (state is TvChannelsSuccess && state.streamUrl != null) {
             Navigator.push(context, MaterialPageRoute(
               builder: (_) => PlayerScreen(
-                streamUrl: state.streamUrl,
-                title: state.channelName,
+                streamUrl: state.streamUrl!,
+                title: state.streamTitle ?? '',
               ),
             ));
           }

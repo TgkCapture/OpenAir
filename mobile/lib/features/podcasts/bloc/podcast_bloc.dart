@@ -9,9 +9,12 @@ part 'podcast_state.dart';
 
 class PodcastBloc extends Bloc<PodcastEvent, PodcastState> {
   final PodcastRepository _repo;
-  final AudioPlayer _player = AudioPlayer();
+  final AudioPlayer _player;
 
-  PodcastBloc(this._repo) : super(PodcastInitial()) {
+  /// [player] can be supplied in tests; the app uses its own.
+  PodcastBloc(this._repo, {AudioPlayer? player})
+      : _player = player ?? AudioPlayer(),
+        super(PodcastInitial()) {
     on<PodcastsLoaded>(_onLoad);
     on<EpisodesLoaded>(_onEpisodes);
     on<EpisodePlayRequested>(_onPlay);
@@ -70,7 +73,8 @@ class PodcastBloc extends Bloc<PodcastEvent, PodcastState> {
     await _player.stop();
     if (state is EpisodeListSuccess) {
       final current = state as EpisodeListSuccess;
-      emit(current.copyWith(nowPlaying: null, isPlaying: false));
+      // copyWith cannot clear a field, so build the state directly.
+      emit(EpisodeListSuccess(current.podcast, current.episodes, null, false));
     }
   }
 

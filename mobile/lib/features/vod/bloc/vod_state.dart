@@ -12,8 +12,14 @@ class VodSuccess extends VodState {
   final List<VodItem> items;
   final List<String> categories;
   final String selectedCategory;
+  /// The stream to open, set by the latest play request.
   final String? streamUrl;
   final String? streamTitle;
+
+  /// Goes up by one each time the user asks to play a video. The screen opens
+  /// the player when this changes, so searching or changing category never
+  /// reopens it, and the same video can be played again.
+  final int playRequest;
 
   const VodSuccess({
     required this.items,
@@ -21,6 +27,7 @@ class VodSuccess extends VodState {
     required this.selectedCategory,
     this.streamUrl,
     this.streamTitle,
+    this.playRequest = 0,
   });
 
   VodSuccess copyWith({
@@ -29,6 +36,7 @@ class VodSuccess extends VodState {
     String? selectedCategory,
     String? streamUrl,
     String? streamTitle,
+    int? playRequest,
   }) =>
       VodSuccess(
         items: items ?? this.items,
@@ -36,10 +44,11 @@ class VodSuccess extends VodState {
         selectedCategory: selectedCategory ?? this.selectedCategory,
         streamUrl: streamUrl ?? this.streamUrl,
         streamTitle: streamTitle ?? this.streamTitle,
+        playRequest: playRequest ?? this.playRequest,
       );
 
   @override
-  List<Object?> get props => [items, categories, selectedCategory, streamUrl];
+  List<Object?> get props => [items, categories, selectedCategory, playRequest];
 }
 
 class VodError extends VodState {

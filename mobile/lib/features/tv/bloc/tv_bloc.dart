@@ -25,9 +25,17 @@ class TvBloc extends Bloc<TvEvent, TvState> {
   }
 
   Future<void> _onStream(TvStreamRequested event, Emitter<TvState> emit) async {
+    if (state is! TvChannelsSuccess) return;
     try {
       final streamUrl = await _repo.getStreamUrl(event.channelId);
-      emit(TvStreamReady(streamUrl.url, event.channelName));
+      final current = state;
+      if (current is! TvChannelsSuccess) return;
+      emit(TvChannelsSuccess(
+        current.channels,
+        streamUrl: streamUrl.url,
+        streamTitle: event.channelName,
+        playRequest: current.playRequest + 1,
+      ));
     } catch (e) {
       emit(TvError(e.toString()));
     }

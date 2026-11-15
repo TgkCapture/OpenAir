@@ -64,6 +64,12 @@ class _VodTabState extends State<_VodTab> {
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<VodBloc, VodState>(
+      // Open the player only when the user has just asked to play a video.
+      listenWhen: (previous, current) =>
+          current is VodError ||
+          (previous is VodSuccess &&
+              current is VodSuccess &&
+              previous.playRequest != current.playRequest),
       listener: (context, state) {
         if (state is VodSuccess && state.streamUrl != null) {
           Navigator.push(
