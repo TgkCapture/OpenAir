@@ -102,63 +102,60 @@ class ApiService {
     return ApiService._internal(url);
   }
 
+  /// Set at build time with `--dart-define=API_URL=https://host/api/v1`.
+  /// Every release build should set it; it is how a broadcaster points the
+  /// app at their own server.
+  static const _configuredUrl = String.fromEnvironment('API_URL');
+
   static Future<String> _resolveBaseUrl() async {
+    if (_configuredUrl.isNotEmpty) return _configuredUrl;
+
     if (kReleaseMode) {
       return 'https://api.openair.stream/api/v1';
     }
 
+    // Debug convenience: with no API_URL, look for a dev server on the phone's
+    // own WiFi network.
     if (defaultTargetPlatform == TargetPlatform.android) {
-      try {
-        final interfaces = await NetworkInterface.list(
-          type: InternetAddressType.IPv4,
-          includeLinkLocal: false,
-        );
-
-        final candidates = <String>[];
-
-        for (final iface in interfaces) {
-          for (final addr in iface.addresses) {
-            final ip = addr.address;
-            if (ip.startsWith('127.') || ip.startsWith('10.0.2.')) continue;
-
-            final parts = ip.split('.');
-            if (parts.length == 4) {
-              // Try .1 through .20 and common dev machine endings on same subnet
-              for (int i = 1; i <= 20; i++) {
-                candidates.add('${parts[0]}.${parts[1]}.${parts[2]}.$i');
-              }
-              // Also try higher numbers common for PCs
-              for (int i = 60; i <= 120; i++) {
-                candidates.add('${parts[0]}.${parts[1]}.${parts[2]}.$i');
-              }
-            }
-          }
-        }
-
-        // Try all candidates in parallel for speed
-        final futures = candidates.map((ip) async {
-          final reachable = await _isReachable(ip, _port);
-          return reachable ? ip : null;
-        });
-
-        final results = await Future.wait(futures);
-        final found = results.firstWhere((r) => r != null, orElse: () => null);
-
-        if (found != null) {
-          return 'http://$found:$_port/api/v1';
-        }
-      } catch (e) {
-        debugPrint('IP detection error: $e');
-      }
-
-      return 'http://10.0.2.2:$_port/api/v1';
-    }
-
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
-      return 'http://localhost:$_port/api/v1';
+      final found = await _findDevServerOnLan();
+      if (found != null) return 'http://$found:$_port/api/v1';
+      return 'http://10.0.2.2:$_port/api/v1'; // Android emulator's host alias.
     }
 
     return 'http://localhost:$_port/api/v1';
+  }
+
+  /// Checks every address on the device's /24 networks for the dev server.
+  static Future<String?> _findDevServerOnLan() async {
+    try {
+      final interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+        includeLinkLocal: false,
+      );
+
+      final candidates = <String>{};
+      for (final iface in interfaces) {
+        for (final addr in iface.addresses) {
+          final ip = addr.address;
+          if (ip.startsWith('127.') || ip.startsWith('10.0.2.')) continue;
+
+          final parts = ip.split('.');
+          if (parts.length != 4) continue;
+          for (int i = 1; i <= 254; i++) {
+            final candidate = '${parts[0]}.${parts[1]}.${parts[2]}.$i';
+            if (candidate != ip) candidates.add(candidate);
+          }
+        }
+      }
+
+      final results = await Future.wait(candidates.map(
+        (ip) async => await _isReachable(ip, _port) ? ip : null,
+      ));
+      return results.firstWhere((r) => r != null, orElse: () => null);
+    } catch (e) {
+      debugPrint('Dev server lookup failed: $e');
+      return null;
+    }
   }
 
   static Future<bool> _isReachable(String host, int port) async {
@@ -174,27 +171,6 @@ class ApiService {
       return false;
     }
   }
-
-  // static Future<List<String>> _gatewayCandidates() async {
-  //   final candidates = <String>[];
-  //   try {
-  //     final interfaces = await NetworkInterface.list(
-  //       type: InternetAddressType.IPv4,
-  //       includeLinkLocal: false,
-  //     );
-  //     for (final iface in interfaces) {
-  //       for (final addr in iface.addresses) {
-  //         final parts = addr.address.split('.');
-  //         if (parts.length == 4) {
-  //           // Try .1 and .2 of the same subnet (typical gateway/host IPs)
-  //           candidates.add('${parts[0]}.${parts[1]}.${parts[2]}.1');
-  //           candidates.add('${parts[0]}.${parts[1]}.${parts[2]}.2');
-  //         }
-  //       }
-  //     }
-  //   } catch (_) {}
-  //   return candidates;
-  // }
 
   Dio get dio => _dio;
 
