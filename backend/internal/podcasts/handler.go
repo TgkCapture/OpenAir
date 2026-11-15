@@ -25,6 +25,40 @@ func (h *Handler) GetAll(c *gin.Context) {
 	utils.OK(c, podcasts)
 }
 
+// AdminGetAll lists every podcast, including deactivated ones.
+func (h *Handler) AdminGetAll(c *gin.Context) {
+	podcasts, err := h.svc.GetAllForAdmin(c.Request.Context())
+	if err != nil {
+		utils.InternalError(c)
+		return
+	}
+	utils.OK(c, podcasts)
+}
+
+func (h *Handler) DeletePodcast(c *gin.Context) {
+	if err := h.svc.DeletePodcast(c.Request.Context(), c.Param("id")); err != nil {
+		if errors.Is(err, ErrPodcastNotFound) {
+			utils.NotFound(c, "podcast not found")
+			return
+		}
+		utils.InternalError(c)
+		return
+	}
+	utils.OK(c, gin.H{"message": "podcast deleted"})
+}
+
+func (h *Handler) DeleteEpisode(c *gin.Context) {
+	if err := h.svc.DeleteEpisode(c.Request.Context(), c.Param("episodeId")); err != nil {
+		if errors.Is(err, ErrEpisodeNotFound) {
+			utils.NotFound(c, "episode not found")
+			return
+		}
+		utils.InternalError(c)
+		return
+	}
+	utils.OK(c, gin.H{"message": "episode deleted"})
+}
+
 func (h *Handler) GetByID(c *gin.Context) {
 	p, err := h.svc.GetByID(c.Request.Context(), c.Param("id"))
 	if err != nil {

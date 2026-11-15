@@ -29,6 +29,19 @@ func (h *Handler) GetAll(c *gin.Context) {
 	utils.OK(c, channels)
 }
 
+// AdminGetAll lists every channel, including deactivated ones.
+func (h *Handler) AdminGetAll(c *gin.Context) {
+	channels, err := h.svc.GetAllForAdmin(c.Request.Context(), c.Query("type"))
+	if err != nil {
+		utils.InternalError(c)
+		return
+	}
+	if channels == nil {
+		channels = []*Channel{}
+	}
+	utils.OK(c, channels)
+}
+
 func (h *Handler) GetByID(c *gin.Context) {
 	ch, err := h.svc.GetByID(c.Request.Context(), c.Param("id"))
 	if err != nil {

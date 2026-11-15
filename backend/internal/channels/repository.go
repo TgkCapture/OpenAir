@@ -17,16 +17,18 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) GetAll(ctx context.Context, channelType string) ([]*Channel, error) {
+// GetAll lists channels. Viewers only see active channels; the admin
+// dashboard passes includeInactive to see deactivated ones too.
+func (r *Repository) GetAll(ctx context.Context, channelType string, includeInactive bool) ([]*Channel, error) {
 	query := `
 		SELECT id, name, type, stream_url, logo_url, description,
 		       is_premium, is_active, sort_order, created_at
 		FROM channels
-		WHERE is_active = true`
+		WHERE (is_active = true OR $1)`
 
-	args := []interface{}{}
+	args := []interface{}{includeInactive}
 	if channelType != "" {
-		query += " AND type = $1"
+		query += " AND type = $2"
 		args = append(args, channelType)
 	}
 	query += " ORDER BY sort_order ASC, name ASC"

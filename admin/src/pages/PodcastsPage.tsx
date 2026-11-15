@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Mic, ChevronRight, ChevronLeft, X } from "lucide-react";
+import { Plus, Mic, ChevronRight, ChevronLeft, Trash2, X } from "lucide-react";
 import api from "../lib/api";
 import FilePicker from "../components/FilePicker";
 
@@ -24,8 +24,22 @@ export default function PodcastsPage() {
 
   const { data: podcasts = [], isLoading } = useQuery({
     queryKey: ["podcasts-admin"],
-    queryFn: async () => (await api.get("/podcasts")).data.data as Podcast[],
+    queryFn: async () => (await api.get("/admin/podcasts")).data.data as Podcast[],
   });
+
+  const deletePodcast = useMutation({
+    mutationFn: (id: string) => api.delete(`/admin/podcasts/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["podcasts-admin"] }),
+    onError: () => window.alert("Could not delete the podcast. Please try again."),
+  });
+
+  const deleteEpisode = useMutation({
+    mutationFn: (id: string) => api.delete(`/admin/podcasts/episodes/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["episodes-admin", selected?.id] }),
+    onError: () => window.alert("Could not delete the episode. Please try again."),
+  });
+
+  const deleteButtonStyle = { padding: 6, background: "none", border: "none", cursor: "pointer", color: "var(--text-3)", borderRadius: 6, flexShrink: 0 } as const;
 
   const { data: episodes = [] } = useQuery({
     queryKey: ["episodes-admin", selected?.id],
@@ -154,6 +168,17 @@ export default function PodcastsPage() {
                   </div>
                   {p.author && <p style={{ fontSize: 11, color: "var(--text-3)", margin: "2px 0 0" }}>{p.author}</p>}
                 </div>
+                {!p.is_active && <span className="badge badge-gray">Inactive</span>}
+                <button title="Delete" aria-label={`Delete ${p.title}`} style={deleteButtonStyle}
+                  disabled={deletePodcast.isPending}
+                  onClick={e => {
+                    e.stopPropagation();
+                    if (window.confirm(`Delete "${p.title}" and all of its episodes? This cannot be undone.`)) {
+                      deletePodcast.mutate(p.id);
+                    }
+                  }}>
+                  <Trash2 size={15} />
+                </button>
                 <ChevronRight size={16} style={{ color: "var(--text-3)", flexShrink: 0 }} />
               </div>
             ))}
@@ -179,6 +204,15 @@ export default function PodcastsPage() {
                   </div>
                   {ep.duration_secs && <p style={{ fontSize: 11, color: "var(--text-3)", margin: "1px 0 0" }}>{Math.floor(ep.duration_secs / 60)}m {ep.duration_secs % 60}s</p>}
                 </div>
+                <button title="Delete" aria-label={`Delete ${ep.title}`} style={deleteButtonStyle}
+                  disabled={deleteEpisode.isPending}
+                  onClick={() => {
+                    if (window.confirm(`Delete "${ep.title}"? This cannot be undone.`)) {
+                      deleteEpisode.mutate(ep.id);
+                    }
+                  }}>
+                  <Trash2 size={15} />
+                </button>
               </div>
             ))}
           </div>

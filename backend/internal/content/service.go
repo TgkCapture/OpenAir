@@ -27,7 +27,29 @@ func (s *Service) GetAll(ctx context.Context, contentType, category, search stri
 	if perPage < 1 || perPage > 50 {
 		perPage = 20
 	}
-	return s.repo.GetAll(ctx, contentType, category, search, page, perPage)
+	return s.repo.GetAll(ctx, contentType, category, search, page, perPage, false)
+}
+
+// GetAllForAdmin also returns unpublished drafts and allows larger pages.
+func (s *Service) GetAllForAdmin(ctx context.Context, contentType, category, search string, page, perPage int) (*ContentListResponse, error) {
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 200 {
+		perPage = 50
+	}
+	return s.repo.GetAll(ctx, contentType, category, search, page, perPage, true)
+}
+
+func (s *Service) Delete(ctx context.Context, id string) error {
+	found, err := s.repo.Delete(ctx, id)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrContentNotFound
+	}
+	return nil
 }
 
 func (s *Service) GetByID(ctx context.Context, id string) (*Content, error) {

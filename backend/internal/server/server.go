@@ -200,19 +200,25 @@ func (s *Server) setupAdminRoutes(admin *gin.RouterGroup) {
 	scheduleHandler := schedule.NewHandler(scheduleRepo)
 
 	// Channel management
+	admin.GET("/channels", channelHandler.AdminGetAll)
 	admin.POST("/channels", channelHandler.Create)
 	admin.PUT("/channels/:id", channelHandler.Update)
 	admin.DELETE("/channels/:id", channelHandler.Delete)
 	admin.PATCH("/channels/:id/access", channelHandler.ToggleAccess)
 
 	// VOD management
+	admin.GET("/vod", contentHandler.AdminGetAll)
 	admin.POST("/vod", contentHandler.Create)
 	admin.PUT("/vod/:id", contentHandler.Update)
+	admin.DELETE("/vod/:id", contentHandler.Delete)
 	admin.PATCH("/vod/:id/access", contentHandler.ToggleAccess)
 
 	// Podcast management
+	admin.GET("/podcasts", podcastHandler.AdminGetAll)
 	admin.POST("/podcasts", podcastHandler.CreatePodcast)
+	admin.DELETE("/podcasts/:id", podcastHandler.DeletePodcast)
 	admin.POST("/podcasts/episodes", podcastHandler.CreateEpisode)
+	admin.DELETE("/podcasts/episodes/:episodeId", podcastHandler.DeleteEpisode)
 
 	// Notifications
 	admin.POST("/notify", notifHandler.Send)

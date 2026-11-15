@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Edit, Eye, EyeOff, Film, X } from "lucide-react";
+import { Plus, Edit, Eye, EyeOff, Film, Trash2, X } from "lucide-react";
 import api from "../lib/api";
 import FilePicker from "../components/FilePicker";
 
@@ -20,8 +20,20 @@ export default function VodPage() {
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["vod"],
-    queryFn: async () => (await api.get("/vod?per_page=50")).data.data as VodItem[],
+    queryFn: async () => (await api.get("/admin/vod?per_page=200")).data.data as VodItem[],
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/admin/vod/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vod"] }),
+    onError: () => window.alert("Could not delete the video. Please try again."),
+  });
+
+  const confirmDelete = (item: VodItem) => {
+    if (window.confirm(`Delete "${item.title}"? This cannot be undone.`)) {
+      deleteMutation.mutate(item.id);
+    }
+  };
 
   const saveMutation = useMutation({
     mutationFn: (data: object) =>
@@ -168,6 +180,11 @@ export default function VodPage() {
                 <button onClick={() => startEdit(item)}
                   style={{ padding: 6, background: "none", border: "none", cursor: "pointer", color: "var(--text-3)", borderRadius: 6 }}>
                   <Edit size={15} />
+                </button>
+                <button onClick={() => confirmDelete(item)} title="Delete" aria-label={`Delete ${item.title}`}
+                  disabled={deleteMutation.isPending}
+                  style={{ padding: 6, background: "none", border: "none", cursor: "pointer", color: "var(--text-3)", borderRadius: 6 }}>
+                  <Trash2 size={15} />
                 </button>
               </div>
             </div>

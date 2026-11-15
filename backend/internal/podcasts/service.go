@@ -20,7 +20,34 @@ func NewService(repo *Repository) *Service {
 }
 
 func (s *Service) GetAll(ctx context.Context) ([]*Podcast, error) {
-	return s.repo.GetAllPodcasts(ctx)
+	return s.repo.GetAllPodcasts(ctx, false)
+}
+
+// GetAllForAdmin also returns deactivated podcasts.
+func (s *Service) GetAllForAdmin(ctx context.Context) ([]*Podcast, error) {
+	return s.repo.GetAllPodcasts(ctx, true)
+}
+
+func (s *Service) DeletePodcast(ctx context.Context, id string) error {
+	found, err := s.repo.DeletePodcast(ctx, id)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrPodcastNotFound
+	}
+	return nil
+}
+
+func (s *Service) DeleteEpisode(ctx context.Context, id string) error {
+	found, err := s.repo.DeleteEpisode(ctx, id)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrEpisodeNotFound
+	}
+	return nil
 }
 
 func (s *Service) GetByID(ctx context.Context, id string) (*Podcast, error) {

@@ -17,12 +17,33 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) GetAllPodcasts(ctx context.Context) ([]*Podcast, error) {
+// DeletePodcast removes a podcast and all of its episodes, and reports
+// whether it existed.
+func (r *Repository) DeletePodcast(ctx context.Context, id string) (bool, error) {
+	tag, err := r.db.Exec(ctx, `DELETE FROM podcasts WHERE id=$1`, id)
+	if err != nil {
+		return false, fmt.Errorf("delete podcast: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
+// DeleteEpisode removes one episode and reports whether it existed.
+func (r *Repository) DeleteEpisode(ctx context.Context, id string) (bool, error) {
+	tag, err := r.db.Exec(ctx, `DELETE FROM episodes WHERE id=$1`, id)
+	if err != nil {
+		return false, fmt.Errorf("delete episode: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
+// GetAllPodcasts lists podcasts. Viewers only see active podcasts; the admin
+// dashboard passes includeInactive to see deactivated ones too.
+func (r *Repository) GetAllPodcasts(ctx context.Context, includeInactive bool) ([]*Podcast, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT id, title, description, artwork_url, author, category,
 		       is_premium, is_active, created_at
-		FROM podcasts WHERE is_active = true
-		ORDER BY created_at DESC`)
+		FROM podcasts WHERE (is_active = true OR $1)
+		ORDER BY created_at DESC`, includeInactive)
 	if err != nil {
 		return nil, fmt.Errorf("get podcasts: %w", err)
 	}
