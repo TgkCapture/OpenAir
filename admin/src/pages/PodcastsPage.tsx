@@ -30,13 +30,11 @@ export default function PodcastsPage() {
   const deletePodcast = useMutation({
     mutationFn: (id: string) => api.delete(`/admin/podcasts/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["podcasts-admin"] }),
-    onError: () => window.alert("Could not delete the podcast. Please try again."),
   });
 
   const deleteEpisode = useMutation({
     mutationFn: (id: string) => api.delete(`/admin/podcasts/episodes/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["episodes-admin", selected?.id] }),
-    onError: () => window.alert("Could not delete the episode. Please try again."),
   });
 
   const deleteButtonStyle = { padding: 6, background: "none", border: "none", cursor: "pointer", color: "var(--text-3)", borderRadius: 6, flexShrink: 0 } as const;
