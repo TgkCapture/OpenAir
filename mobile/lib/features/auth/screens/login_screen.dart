@@ -101,6 +101,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextButton(onPressed: () => context.go('/register'), child: const Text('Sign up')),
                       ],
                     ),
+                    TextButton(
+                      onPressed: () => context.go('/home'),
+                      child: const Text('Continue without an account'),
+                    ),
                   ],
                 ),
               ),
