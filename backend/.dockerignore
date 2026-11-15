@@ -1,0 +1,6 @@
+# Keep local data and secrets out of the build context and the image.
+uploads/
+config/keys/
+.env
+*.env
+tmp/
