@@ -6,6 +6,17 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Lets the app reach a dev server on the local network over HTTP. -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<!-- Keeps radio and podcasts playing when the app is in the background. -->
+		<string>audio</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Openair</string>
 	<key>CFBundleExecutable</key>
