@@ -175,6 +175,16 @@ func (s *Server) setupProtectedRoutes(protected *gin.RouterGroup) {
 	protected.GET("/vod/:id/stream/secure", contentHandler.GetStreamURL)
 	protected.POST("/watch-history", contentHandler.SaveWatchHistory)
 	protected.GET("/watch-history", contentHandler.GetWatchHistory)
+
+	// Notifications
+	notifRepo := notifications.NewRepository(s.db)
+	notifSvc := notifications.NewService(notifRepo, s.cfg)
+	notifHandler := notifications.NewHandler(notifSvc)
+
+	protected.GET("/notifications", notifHandler.GetNotifications)
+	protected.POST("/notifications/read", notifHandler.MarkAllRead)
+	protected.POST("/notifications/token", notifHandler.RegisterToken)
+	protected.DELETE("/notifications/token", notifHandler.UnregisterToken)
 }
 
 // setupAdminRoutes configures administrator-only endpoints
