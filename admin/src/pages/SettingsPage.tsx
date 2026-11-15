@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Save, Check } from "lucide-react";
 import api from "../lib/api";
@@ -10,9 +10,15 @@ interface AppConfig {
   enable_podcasts: boolean; enable_radio: boolean;
 }
 
+const DEFAULT_CONFIG: AppConfig = {
+  broadcaster: "OpenAir", primary_color: "#E63946", logo_url: null,
+  enable_vod: true, enable_podcasts: true, enable_radio: true,
+};
+
 export default function SettingsPage() {
   const qc = useQueryClient();
-  const [form, setForm] = useState<AppConfig>({ broadcaster: "OpenAir", primary_color: "#E63946", logo_url: null, enable_vod: true, enable_podcasts: true, enable_radio: true });
+  // Unsaved edits. Until the user changes something, the form shows the saved config.
+  const [draft, setDraft] = useState<AppConfig | null>(null);
   const [saved, setSaved] = useState(false);
 
   const { data: config } = useQuery({
@@ -20,7 +26,8 @@ export default function SettingsPage() {
     queryFn: async () => (await api.get("/config")).data.data as AppConfig,
   });
 
-  useEffect(() => { if (config) setForm(config); }, [config]);
+  const form: AppConfig = draft ?? config ?? DEFAULT_CONFIG;
+  const setForm = (update: (current: AppConfig) => AppConfig) => setDraft(update(form));
 
   const saveMutation = useMutation({
     mutationFn: (data: AppConfig) => api.put("/admin/config", data),

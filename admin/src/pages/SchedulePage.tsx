@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Calendar } from "lucide-react";
 import api from "../lib/api";
@@ -18,14 +18,9 @@ interface Programme {
   ends_at: string;
 }
 
-const toLocalInput = (iso: string) => {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-};
-
 export default function SchedulePage() {
   const qc = useQueryClient();
-  const [selectedChannel, setSelectedChannel] = useState<string>("");
+  const [pickedChannel, setSelectedChannel] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -46,11 +41,8 @@ export default function SchedulePage() {
     },
   });
 
-  useEffect(() => {
-    if (channels.length > 0 && !selectedChannel) {
-      setSelectedChannel(channels[0].id);
-    }
-  }, [channels, selectedChannel]);
+  // Until the user picks a channel, show the first one.
+  const selectedChannel = pickedChannel || channels[0]?.id || "";
 
   const { data: programmes = [] } = useQuery({
     queryKey: ["schedule", selectedChannel, selectedDate],
