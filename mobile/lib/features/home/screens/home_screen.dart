@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:openair/core/di/injection.dart';
 import 'package:openair/core/services/api_service.dart';
 import 'package:openair/features/tv/models/channel_model.dart';
@@ -19,11 +20,19 @@ class _HomeScreenState extends State<HomeScreen> {
   List<VodItem> _featuredVod = [];
   bool _loading = true;
   String? _error;
+  Channel? _playingRadio;
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -35,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
         api.dio.get('/channels', queryParameters: {'type': 'radio'}),
         api.dio.get('/vod', queryParameters: {'type': 'vod', 'per_page': 6}),
       ]);
-
+      if (!mounted) return;
       setState(() {
         _tvChannels = (results[0].data['data'] as List? ?? [])
             .map((e) => Channel.fromJson(e)).toList();
@@ -45,33 +54,49 @@ class _HomeScreenState extends State<HomeScreen> {
             .map((e) => VodItem.fromJson(e)).toList();
         _loading = false;
       });
-    } on DioException catch (e) {
-      setState(() {
-        _error = e.message ?? 'Failed to load content';
-        _loading = false;
-      });
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+      if (!mounted) return;
+      setState(() { _error = 'Could not load content'; _loading = false; });
     }
   }
 
-  Future<void> _playChannel(Channel channel) async {
+  Future<void> _playTvChannel(Channel channel) async {
     try {
       final api = getIt<ApiService>();
       final res = await api.dio.get('/channels/${channel.id}/stream');
-      final url = res.data['data']['url'];
+      final url = res.data['data']['url'] as String;
       if (!mounted) return;
+      await _audioPlayer.stop();
+      setState(() => _playingRadio = null);
       Navigator.push(context, MaterialPageRoute(
         builder: (_) => PlayerScreen(streamUrl: url, title: channel.name),
       ));
-    } catch (e) {
+    } on DioException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not load stream: $e'), backgroundColor: Colors.red),
-      );
+      final msg = e.response?.data?['error']?['message'] ?? 'Could not load stream';
+      _showError(msg);
+    }
+  }
+
+  Future<void> _playRadio(Channel channel) async {
+    try {
+      if (_playingRadio?.id == channel.id) {
+        await _audioPlayer.stop();
+        setState(() => _playingRadio = null);
+        return;
+      }
+      final api = getIt<ApiService>();
+      final res = await api.dio.get('/channels/${channel.id}/stream');
+      final url = res.data['data']['url'] as String;
+      await _audioPlayer.stop();
+      await _audioPlayer.setUrl(url);
+      await _audioPlayer.play();
+      if (!mounted) return;
+      setState(() => _playingRadio = channel);
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final msg = e.response?.data?['error']?['message'] ?? 'Could not load stream';
+      _showError(msg);
     }
   }
 
@@ -79,268 +104,272 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final api = getIt<ApiService>();
       final res = await api.dio.get('/vod/${item.id}/stream');
-      final url = res.data['data']['url'];
+      final url = res.data['data']['url'] as String;
       if (!mounted) return;
       Navigator.push(context, MaterialPageRoute(
         builder: (_) => PlayerScreen(streamUrl: url, title: item.title),
       ));
-    } catch (e) {
+    } on DioException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not load video: $e'), backgroundColor: Colors.red),
-      );
+      final msg = e.response?.data?['error']?['message'] ?? 'Could not load video';
+      _showError(msg);
     }
   }
 
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Column(
           children: [
-            Icon(Icons.radio, color: theme.colorScheme.primary, size: 22),
-            const SizedBox(width: 8),
-            const Text('OpenAir', style: TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-          ),
-        ],
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.wifi_off, size: 64, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      Text(_error!, textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.grey)),
-                      const SizedBox(height: 16),
-                      FilledButton.icon(
-                        onPressed: _loadData,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadData,
-                  child: ListView(
-                    children: [
-                      // Live TV section
-                      if (_tvChannels.isNotEmpty) ...[
-                        _SectionHeader(
-                          title: 'Live TV',
-                          icon: Icons.tv,
-                          onSeeAll: () {},
-                        ),
-                        SizedBox(
-                          height: 110,
-                          child: ListView.separated(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            scrollDirection: Axis.horizontal,
-                            separatorBuilder: (_, __) => const SizedBox(width: 12),
-                            itemCount: _tvChannels.length,
-                            itemBuilder: (context, i) =>
-                                _LiveChannelChip(
-                                  channel: _tvChannels[i],
-                                  onTap: () => _playChannel(_tvChannels[i]),
-                                ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-
-                      // Live Radio section
-                      if (_radioChannels.isNotEmpty) ...[
-                        _SectionHeader(
-                          title: 'Live Radio',
-                          icon: Icons.radio,
-                          onSeeAll: () {},
-                        ),
-                        SizedBox(
-                          height: 80,
-                          child: ListView.separated(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            scrollDirection: Axis.horizontal,
-                            separatorBuilder: (_, __) => const SizedBox(width: 12),
-                            itemCount: _radioChannels.length,
-                            itemBuilder: (context, i) =>
-                                _RadioChip(channel: _radioChannels[i]),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-
-                      // Featured VOD section
-                      if (_featuredVod.isNotEmpty) ...[
-                        _SectionHeader(
-                          title: 'Featured Videos',
-                          icon: Icons.video_library_outlined,
-                          onSeeAll: () {},
-                        ),
-                        SizedBox(
-                          height: 180,
-                          child: ListView.separated(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            scrollDirection: Axis.horizontal,
-                            separatorBuilder: (_, __) => const SizedBox(width: 12),
-                            itemCount: _featuredVod.length,
-                            itemBuilder: (context, i) =>
-                                _VodCard(
-                                  item: _featuredVod[i],
-                                  onTap: () => _playVod(_featuredVod[i]),
-                                ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-
-                      // Empty state
-                      if (_tvChannels.isEmpty &&
-                          _radioChannels.isEmpty &&
-                          _featuredVod.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.all(48),
-                          child: Column(
-                            children: [
-                              Icon(Icons.live_tv,
-                                  size: 80,
-                                  color: theme.colorScheme.primary.withValues(alpha: 0.4)),
-                              const SizedBox(height: 16),
-                              const Text('No content available yet',
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Content will appear here once channels and videos are added.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final VoidCallback onSeeAll;
-
-  const _SectionHeader({
-    required this.title,
-    required this.icon,
-    required this.onSeeAll,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 12),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 8),
-          Text(title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const Spacer(),
-          TextButton(onPressed: onSeeAll, child: const Text('See all')),
-        ],
-      ),
-    );
-  }
-}
-
-class _LiveChannelChip extends StatelessWidget {
-  final Channel channel;
-  final VoidCallback onTap;
-
-  const _LiveChannelChip({required this.channel, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 120,
-        decoration: BoxDecoration(
-          color: theme.cardTheme.color,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
-        ),
-        child: Stack(
-          children: [
-            Center(
-              child: channel.logoUrl != null
-                  ? Image.network(channel.logoUrl!,
-                      height: 40,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.tv, size: 36, color: Colors.grey))
-                  : const Icon(Icons.tv, size: 36, color: Colors.grey),
-            ),
-            Positioned(
-              bottom: 8,
-              left: 8,
-              right: 8,
-              child: Text(
-                channel.name,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
-            ),
-            Positioned(
-              top: 8,
-              left: 8,
+            // ── App bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 16, 8),
               child: Row(
                 children: [
                   Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.radio, color: Colors.white, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Text('OpenAir',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    )),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.search_rounded),
+                    onPressed: () {},
+                    style: IconButton.styleFrom(
+                      backgroundColor: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  const Text('LIVE',
-                      style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
+
+            // ── Now playing bar
+            if (_playingRadio != null)
+              _NowPlayingBar(
+                channel: _playingRadio!,
+                onStop: () async {
+                  await _audioPlayer.stop();
+                  setState(() => _playingRadio = null);
+                },
+              ),
+
+            // ── Body
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                  : _error != null
+                      ? _ErrorView(message: _error!, onRetry: _loadData)
+                      : RefreshIndicator(
+                          onRefresh: _loadData,
+                          child: ListView(
+                            padding: const EdgeInsets.only(bottom: 24),
+                            children: [
+                              if (_tvChannels.isNotEmpty) ...[
+                                const _SectionHeader(title: 'Live TV', icon: Icons.tv_rounded),
+                                SizedBox(
+                                  height: 120,
+                                  child: ListView.separated(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    scrollDirection: Axis.horizontal,
+                                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                                    itemCount: _tvChannels.length,
+                                    itemBuilder: (_, i) => _TvChannelCard(
+                                      channel: _tvChannels[i],
+                                      onTap: () => _playTvChannel(_tvChannels[i]),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                              ],
+                              if (_radioChannels.isNotEmpty) ...[
+                                const _SectionHeader(title: 'Live Radio', icon: Icons.radio_rounded),
+                                SizedBox(
+                                  height: 72,
+                                  child: ListView.separated(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    scrollDirection: Axis.horizontal,
+                                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                                    itemCount: _radioChannels.length,
+                                    itemBuilder: (_, i) => _RadioChip(
+                                      channel: _radioChannels[i],
+                                      isPlaying: _playingRadio?.id == _radioChannels[i].id,
+                                      onTap: () => _playRadio(_radioChannels[i]),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                              ],
+                              if (_featuredVod.isNotEmpty) ...[
+                                const _SectionHeader(title: 'Featured Videos', icon: Icons.video_library_rounded),
+                                SizedBox(
+                                  height: 200,
+                                  child: ListView.separated(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    scrollDirection: Axis.horizontal,
+                                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                                    itemCount: _featuredVod.length,
+                                    itemBuilder: (_, i) => _VodCard(
+                                      item: _featuredVod[i],
+                                      onTap: () => _playVod(_featuredVod[i]),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                              ],
+                              if (_tvChannels.isEmpty && _radioChannels.isEmpty && _featuredVod.isEmpty)
+                                _EmptyHome(),
+                            ],
+                          ),
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Section header
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  const _SectionHeader({required this.title, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Icon(icon, size: 14, color: theme.colorScheme.primary),
+          ),
+          const SizedBox(width: 8),
+          Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          const Spacer(),
+          Text('See all', style: TextStyle(fontSize: 12, color: theme.colorScheme.primary, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+// ── TV channel card
+class _TvChannelCard extends StatelessWidget {
+  final Channel channel;
+  final VoidCallback onTap;
+  const _TvChannelCard({required this.channel, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 130,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+              blurRadius: 8, offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Logo or icon
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Center(
+                  child: channel.logoUrl != null
+                      ? Image.network(channel.logoUrl!, height: 42, fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => Icon(Icons.tv_rounded, size: 32, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)))
+                      : Icon(Icons.tv_rounded, size: 32, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+                ),
+              ),
+            ),
+            // Bottom gradient + name
+            Positioned(
+              bottom: 0, left: 0, right: 0,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
+                  ),
+                ),
+                padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+                child: Text(channel.name,
+                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+            ),
+            // Live badge
+            Positioned(
+              top: 8, left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(width: 4, height: 4, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                    const SizedBox(width: 3),
+                    const Text('LIVE', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+                  ],
+                ),
+              ),
+            ),
+            // PRO badge
             if (channel.isPremium)
               Positioned(
-                top: 6,
-                right: 6,
+                top: 8, right: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: const Text('PRO',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold)),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(color: theme.colorScheme.primary, borderRadius: BorderRadius.circular(4)),
+                  child: const Text('PRO', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800)),
                 ),
               ),
           ],
@@ -350,57 +379,84 @@ class _LiveChannelChip extends StatelessWidget {
   }
 }
 
+// ── Radio chip — now fully clickable
 class _RadioChip extends StatelessWidget {
   final Channel channel;
-  const _RadioChip({required this.channel});
+  final bool isPlaying;
+  final VoidCallback onTap;
+  const _RadioChip({required this.channel, required this.isPlaying, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      width: 150,
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 12),
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: theme.colorScheme.primaryContainer,
-            child: Icon(Icons.radio, size: 18, color: theme.colorScheme.primary),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              channel.name,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+    final isDark = theme.brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: 72,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: isPlaying
+              ? theme.colorScheme.primary
+              : (isDark ? const Color(0xFF1A1A1A) : Colors.white),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: isPlaying
+                  ? theme.colorScheme.primary.withValues(alpha: 0.4)
+                  : Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+              blurRadius: isPlaying ? 12 : 8,
+              offset: const Offset(0, 2),
             ),
-          ),
-          const SizedBox(width: 8),
-        ],
+          ],
+        ),
+        child: Row(
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                key: ValueKey(isPlaying),
+                color: isPlaying ? Colors.white : theme.colorScheme.primary,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 10),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 120),
+              child: Text(channel.name,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isPlaying ? Colors.white : theme.colorScheme.onSurface,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
+// ── VOD card
 class _VodCard extends StatelessWidget {
   final VodItem item;
   final VoidCallback onTap;
-
   const _VodCard({required this.item, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: 150,
+        width: 160,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -409,43 +465,68 @@ class _VodCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                     child: item.thumbnailUrl != null
-                        ? Image.network(item.thumbnailUrl!,
-                            fit: BoxFit.cover,
+                        ? Image.network(item.thumbnailUrl!, fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => _placeholder())
                         : _placeholder(),
                   ),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      child: const Icon(Icons.play_circle_outline,
-                          color: Colors.white, size: 36),
+                  // Play overlay
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: onTap,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.5)],
+                              ),
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.play_circle_filled_rounded, color: Colors.white, size: 40),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                  if (item.isPremium)
+                  // Duration
+                  if (item.formattedDuration.isNotEmpty)
                     Positioned(
-                      top: 6,
-                      right: 6,
+                      bottom: 8, right: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text('PRO',
-                            style: TextStyle(color: Colors.white, fontSize: 9)),
+                        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.75), borderRadius: BorderRadius.circular(4)),
+                        child: Text(item.formattedDuration, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  // PRO badge
+                  if (item.isPremium)
+                    Positioned(
+                      top: 8, right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(color: theme.colorScheme.primary, borderRadius: BorderRadius.circular(4)),
+                        child: const Text('PRO', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
                       ),
                     ),
                 ],
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(item.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              maxLines: 2, overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, height: 1.3)),
+            if (item.category != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(item.category!, style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.45))),
+              ),
           ],
         ),
       ),
@@ -453,6 +534,96 @@ class _VodCard extends StatelessWidget {
   }
 
   Widget _placeholder() => Container(
-      color: Colors.grey[800],
-      child: const Icon(Icons.movie, color: Colors.grey, size: 32));
+    decoration: BoxDecoration(color: Colors.grey[850], borderRadius: BorderRadius.circular(12)),
+    child: const Icon(Icons.movie_rounded, color: Colors.grey, size: 36),
+  );
+}
+
+// ── Now playing bar
+class _NowPlayingBar extends StatelessWidget {
+  final Channel channel;
+  final VoidCallback onStop;
+  const _NowPlayingBar({required this.channel, required this.onStop});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.8)]),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: theme.colorScheme.primary.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 4))],
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.graphic_eq_rounded, color: Colors.white, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('NOW PLAYING', style: TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                Text(channel.name, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.stop_circle_outlined, color: Colors.white),
+            onPressed: onStop,
+            iconSize: 22,
+            padding: const EdgeInsets.all(6),
+            constraints: const BoxConstraints(),
+            style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: 0.15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Error view
+class _ErrorView extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _ErrorView({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.wifi_off_rounded, size: 56, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey)),
+            const SizedBox(height: 20),
+            FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh_rounded, size: 16), label: const Text('Retry')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Empty home
+class _EmptyHome extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(48),
+      child: Column(
+        children: [
+          Icon(Icons.live_tv_rounded, size: 72, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+          const SizedBox(height: 16),
+          const Text('No content yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text('Add channels and videos in the admin dashboard.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+        ],
+      ),
+    );
+  }
 }
