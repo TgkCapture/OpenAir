@@ -56,7 +56,7 @@ func (s *Server) Router() http.Handler {
 func (s *Server) setupMiddleware() {
 	s.router.Use(gin.Logger())
 	s.router.Use(gin.Recovery())
-	s.router.Use(corsMiddleware())
+	s.router.Use(corsMiddleware(s.cfg.CORSAllowedOrigins))
 }
 
 // setupRoutes configures all API routes
@@ -274,7 +274,7 @@ func (s *Server) getAppConfig(c *gin.Context) {
 	err := s.db.QueryRow(c.Request.Context(), `
 		SELECT broadcaster, primary_color, logo_url,
 			enable_vod, enable_podcasts, enable_radio, timezone
-		FROM app_config LIMIT 1`).Scan(
+		FROM app_config ORDER BY updated_at DESC, id LIMIT 1`).Scan(
 		&cfg.Broadcaster, &cfg.PrimaryColor, &cfg.LogoURL,
 		&cfg.EnableVod, &cfg.EnablePodcasts, &cfg.EnableRadio, &cfg.Timezone,
 	)
@@ -323,6 +323,7 @@ func (s *Server) updateAppConfig(c *gin.Context) {
 			enable_radio=$6,
 			timezone=COALESCE(NULLIF($7, ''), timezone),
 			updated_at=NOW()
+		WHERE id = (SELECT id FROM app_config ORDER BY updated_at, id LIMIT 1)
 		RETURNING timezone`,
 		cfg.Broadcaster, cfg.PrimaryColor, cfg.LogoURL,
 		cfg.EnableVod, cfg.EnablePodcasts, cfg.EnableRadio, cfg.Timezone,
@@ -451,9 +452,28 @@ func (s *Server) getAnalytics(c *gin.Context) {
 // ==================== MIDDLEWARE ====================
 
 // corsMiddleware handles Cross-Origin Resource Sharing
-func corsMiddleware() gin.HandlerFunc {
+// corsMiddleware lets browser apps on the allowed origins call the API. The
+// mobile apps are not browsers and are unaffected. An entry of "*" allows any
+// origin, which is the development default.
+func corsMiddleware(allowedOrigins []string) gin.HandlerFunc {
+	allowAll := false
+	allowed := make(map[string]bool, len(allowedOrigins))
+	for _, origin := range allowedOrigins {
+		if origin == "*" {
+			allowAll = true
+		}
+		allowed[origin] = true
+	}
+
 	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
+		origin := c.GetHeader("Origin")
+		switch {
+		case allowAll:
+			c.Header("Access-Control-Allow-Origin", "*")
+		case origin != "" && allowed[origin]:
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Vary", "Origin")
+		}
 		c.Header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Authorization,Content-Type")
 
