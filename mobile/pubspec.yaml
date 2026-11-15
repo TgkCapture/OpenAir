@@ -71,3 +71,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icons/
+  fonts:
+    # Bundled so the app looks the same on Android and iOS. Licence: assets/fonts/OFL.txt
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Variable.ttf

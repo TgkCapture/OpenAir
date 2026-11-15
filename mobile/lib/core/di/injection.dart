@@ -28,7 +28,17 @@ Future<void> configureDependencies() async {
   
   getIt.registerFactory<AuthBloc>(() => AuthBloc(getIt<AuthRepository>()));
   getIt.registerFactory<RadioBloc>(() => RadioBloc(getIt<ChannelRepository>(), getIt<AudioController>()));
-  getIt.registerFactory<SettingsBloc>(() => SettingsBloc());
+  getIt.registerFactory<SettingsBloc>(() => SettingsBloc(
+        // The broadcaster's name and brand colour come from the server.
+        loadBranding: () async {
+          final res = await getIt<ApiService>().dio.get('/config');
+          final data = res.data['data'] as Map<String, dynamic>;
+          return Branding(
+            name: data['broadcaster'] as String? ?? 'OpenAir',
+            primaryColorHex: data['primary_color'] as String?,
+          );
+        },
+      ));
   getIt.registerFactory<VodBloc>(() => VodBloc(getIt<VodRepository>()));
   getIt.registerFactory<PodcastBloc>(() => PodcastBloc(getIt<PodcastRepository>(), getIt<AudioController>()));
 }
