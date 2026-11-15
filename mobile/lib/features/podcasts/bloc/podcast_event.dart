@@ -31,3 +31,6 @@ class EpisodePlayRequested extends PodcastEvent {
 class EpisodePaused extends PodcastEvent {}
 
 class EpisodeStopped extends PodcastEvent {}
+
+/// Sent when the shared audio player's state changes.
+class _PodcastAudioChanged extends PodcastEvent {}

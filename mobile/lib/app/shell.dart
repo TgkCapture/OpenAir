@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openair/core/audio/mini_player.dart';
 
 class AppShell extends StatelessWidget {
   final Widget child;
@@ -22,7 +23,12 @@ class AppShell extends StatelessWidget {
     final idx = _selectedIndex(context);
 
     return Scaffold(
-      body: child,
+      body: Column(
+        children: [
+          Expanded(child: child),
+          const MiniPlayer(),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF111113) : Colors.white,

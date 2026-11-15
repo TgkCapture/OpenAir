@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:openair/core/audio/audio_controller.dart';
 import 'package:openair/core/di/injection.dart';
 import 'package:openair/features/radio/bloc/radio_bloc.dart';
 import 'package:openair/features/tv/models/channel_model.dart';
@@ -11,7 +12,7 @@ class RadioScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => RadioBloc(getIt<ChannelRepository>())..add(RadioChannelsLoaded()),
+      create: (_) => RadioBloc(getIt<ChannelRepository>(), getIt<AudioController>())..add(RadioChannelsLoaded()),
       child: const _RadioView(),
     );
   }
@@ -33,11 +34,6 @@ class _RadioView extends StatelessWidget {
           if (state is RadioChannelsSuccess) {
             return Column(
               children: [
-                if (state.nowPlaying != null)
-                  _NowPlayingBar(
-                    channel: state.nowPlaying!,
-                    onStop: () => context.read<RadioBloc>().add(RadioStopped()),
-                  ),
                 Expanded(
                   child: state.channels.isEmpty
                       ? const Center(
@@ -141,50 +137,6 @@ class _RadioTile extends StatelessWidget {
               color: theme.colorScheme.primary, size: 32)
           : const Icon(Icons.play_circle_outline, size: 32),
       onTap: onTap,
-    );
-  }
-}
-
-class _NowPlayingBar extends StatelessWidget {
-  final Channel channel;
-  final VoidCallback onStop;
-
-  const _NowPlayingBar({required this.channel, required this.onStop});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      color: theme.colorScheme.primary.withValues(alpha:0.1),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          const Icon(Icons.graphic_eq, color: Colors.red),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'NOW PLAYING',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(channel.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.stop_circle_outlined),
-            onPressed: onStop,
-            color: Colors.red,
-          ),
-        ],
-      ),
     );
   }
 }

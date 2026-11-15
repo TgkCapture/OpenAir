@@ -1,5 +1,8 @@
 package com.tgkcapture.openair
 
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 
-class MainActivity : FlutterActivity()
+// AudioServiceActivity shares one Flutter engine with the background audio
+// service. With a plain FlutterActivity the audio plugin starts a second
+// engine and the whole app runs twice.
+class MainActivity : AudioServiceActivity()

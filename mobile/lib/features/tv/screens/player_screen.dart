@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:openair/core/audio/audio_controller.dart';
+import 'package:openair/core/di/injection.dart';
 
 class PlayerScreen extends StatefulWidget {
   final String streamUrl;
@@ -29,6 +31,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
       DeviceOrientation.landscapeRight,
       DeviceOrientation.portraitUp,
     ]);
+
+    // Video takes over from radio or a podcast.
+    getIt<AudioController>().stop();
 
     _player = Player();
     _controller = VideoController(_player);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openair/app/router.dart';
 import 'package:openair/app/theme.dart';
+import 'package:openair/core/audio/audio_controller.dart';
 import 'package:openair/core/di/injection.dart';
 import 'package:openair/features/auth/bloc/auth_bloc.dart';
 import 'package:openair/features/settings/bloc/settings_bloc.dart';
@@ -14,6 +15,7 @@ class OpenAirApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => getIt<SettingsBloc>()..add(SettingsLoaded())),
+        BlocProvider.value(value: getIt<AudioController>()),
         BlocProvider(
           lazy: false,
           create: (_) => getIt<AuthBloc>()..add(AuthSessionRestoreRequested()),
