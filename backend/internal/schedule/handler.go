@@ -18,15 +18,16 @@ func NewHandler(repo *Repository) *Handler {
 
 func (h *Handler) GetByChannel(c *gin.Context) {
 	channelID := c.Param("channelId")
-	dateStr := c.DefaultQuery("date", time.Now().UTC().Format("2006-01-02"))
 
-	date, err := time.Parse("2006-01-02", dateStr)
+	// A schedule day runs from midnight to midnight at the station, not in UTC.
+	loc := h.repo.StationLocation(c.Request.Context())
+	start, end, err := dayBounds(c.Query("date"), loc, time.Now())
 	if err != nil {
 		utils.BadRequest(c, "VALIDATION_ERROR", "invalid date format, use YYYY-MM-DD")
 		return
 	}
 
-	programmes, err := h.repo.GetByChannel(c.Request.Context(), channelID, date)
+	programmes, err := h.repo.GetByChannel(c.Request.Context(), channelID, start, end)
 	if err != nil {
 		utils.InternalError(c)
 		return

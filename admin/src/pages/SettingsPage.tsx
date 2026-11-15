@@ -8,11 +8,16 @@ interface AppConfig {
   broadcaster: string; primary_color: string;
   logo_url: string | null; enable_vod: boolean;
   enable_podcasts: boolean; enable_radio: boolean;
+  timezone: string;
 }
+
+// Every timezone the browser knows, for the station timezone picker.
+const TIMEZONES: string[] = Intl.supportedValuesOf("timeZone");
 
 const DEFAULT_CONFIG: AppConfig = {
   broadcaster: "OpenAir", primary_color: "#E63946", logo_url: null,
   enable_vod: true, enable_podcasts: true, enable_radio: true,
+  timezone: "UTC",
 };
 
 export default function SettingsPage() {
@@ -75,6 +80,22 @@ export default function SettingsPage() {
           <FilePicker label="App Logo" value={form.logo_url ?? ""}
             onChange={url => setForm(f => ({ ...f, logo_url: url || null }))}
             accept="image/*" placeholder="Paste logo URL or upload" />
+        </div>
+
+        {/* Schedule */}
+        <div className="card" style={{ padding: 24 }}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 20px" }}>Schedule</h2>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="label" htmlFor="station-timezone">Station Timezone</label>
+            <select id="station-timezone" className="input" value={form.timezone}
+              onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}>
+              {!TIMEZONES.includes(form.timezone) && <option value={form.timezone}>{form.timezone}</option>}
+              {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
+            </select>
+            <p style={{ fontSize: 12, color: "var(--text-3)", margin: "6px 0 0" }}>
+              A programme guide day runs from midnight to midnight in this timezone.
+            </p>
+          </div>
         </div>
 
         {/* Feature flags */}
