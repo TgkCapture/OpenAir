@@ -77,15 +77,15 @@ func main() {
 		_, err = db.Exec(context.Background(), `
 			INSERT INTO content (title, description, type, file_url, thumbnail_url, category, duration_secs, is_premium, is_published) VALUES
 			('Big Buck Bunny', 'Classic open source animation', 'vod',
-			 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+			 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
 			 'https://peach.blender.org/wp-content/uploads/title_anouncement.jpg?x11217',
-			 'Entertainment', 596, false, true),
-			('Elephant Dream', 'First Blender open movie', 'vod',
-			 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-			 null, 'Documentary', 654, false, true),
-			('For Bigger Blazes', 'Action promo clip', 'vod',
-			 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-			 null, 'Entertainment', 15, false, true)`)
+			 'Entertainment', 634, false, true),
+			('Tears of Steel', 'Blender open movie', 'vod',
+			 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
+			 null, 'Drama', 734, false, true),
+			('Sintel trailer', 'Trailer for the Blender open movie', 'vod',
+			 'https://download.blender.org/durian/trailer/sintel_trailer-480p.mp4',
+			 null, 'Entertainment', 52, false, true)`)
 		if err != nil {
 			log.Printf("seed vod: %v", err)
 		} else {

@@ -24,9 +24,6 @@ dependencies:
   shared_preferences: ^2.3.0
 
   # Video & Audio (actively maintained, works with Android SDK 36)
-  media_kit: ^1.1.11
-  media_kit_video: ^1.2.4
-  media_kit_libs_video: ^1.0.5
   just_audio: ^0.9.39
 
   # UI helpers
@@ -43,6 +40,8 @@ dependencies:
   # Notifications
   flutter_local_notifications: ^18.0.0
   just_audio_background: ^0.0.1-beta.17
+  video_player: ^2.11.1
+  wakelock_plus: ^1.5.2
 
 dev_dependencies:
   flutter_test:
